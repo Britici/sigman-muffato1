@@ -14,7 +14,7 @@ import { showToast } from './utils.js';
 const MODE = 'mock'; // 'mock' | 'sheets' | 'rest'
 
 // ATENÇÃO: ao trocar para 'sheets', substitua pela URL real do deploy
-const GAS_URL  = 'https://script.google.com/macros/s/SEU_SCRIPT_ID/exec';
+const GAS_URL  = 'https://script.google.com/macros/s/AKfycbwzcntvx4_QfBYotW2Sz2H8TiwprqkmAyWolYlbIeCfTR2Uhj2VIgVC7Mun1mTaFXohuA/exec';
 const REST_URL = 'http://localhost:3000/api';
 
 // ── Estado em memória ─────────────────────────────────────────
