@@ -1,0 +1,19 @@
+# Ambiente
+.env
+*.env.local
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Docker volumes (não versionar dados)
+pgdata/
+pgadmin_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

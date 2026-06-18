@@ -1,0 +1,73 @@
+# SIGMAN v2.0 — docker-compose.yml
+# Requer: Docker Desktop com WSL2 backend
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sigman_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-sigman}
+      POSTGRES_USER:     ${DB_USER:-sigman}
+      POSTGRES_PASSWORD: ${DB_PASS:?DB_PASS obrigatório no .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sigman} -d ${DB_NAME:-sigman}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sigman_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    ${PGADMIN_EMAIL:-admin@sigman.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS:?PGADMIN_PASS obrigatório no .env}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sigman_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV:        ${NODE_ENV:-development}
+      PORT:            ${PORT:-3000}
+      DB_HOST:         postgres
+      DB_PORT:         5432
+      DB_NAME:         ${DB_NAME:-sigman}
+      DB_USER:         ${DB_USER:-sigman}
+      DB_PASS:         ${DB_PASS}
+      GOOGLE_CLIENT_ID:     ${GOOGLE_CLIENT_ID:?obrigatório}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?obrigatório}
+      SESSION_SECRET:       ${SESSION_SECRET:?obrigatório}
+      FRONTEND_URL:    ${FRONTEND_URL:-http://localhost:5173}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules          # evita sobrescrever node_modules do container
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run dev
+
+volumes:
+  pgdata:
+  pgadmin_data:

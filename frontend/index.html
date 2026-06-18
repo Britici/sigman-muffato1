@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SIGMAN · Muffato Foods</title>
+  <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<!-- ══ LOADING ══ -->
+<div id="loading-screen">
+  <div class="ls-spin"></div>
+  <div class="ls-txt">Carregando...</div>
+</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen">
+  <div class="lbox">
+    <div class="lbrand">
+      <img src="https://muffatofoods.com.br/assets/images/foods_logo.png" alt="Muffato Foods">
+      <div>
+        <div class="lsigman">SIG<em>MAN</em></div>
+        <div class="lsub">Muffato Foods</div>
+      </div>
+    </div>
+    <div class="lalert" id="l-alert"></div>
+    <div class="ltitle">Acesso ao Sistema</div>
+    <div class="fg">
+      <label>Usuário</label>
+      <input type="text" id="l-u" placeholder="Login" autocomplete="username">
+    </div>
+    <div class="fg">
+      <label>Senha</label>
+      <input type="password" id="l-p" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-p btn-fl" id="btn-login" style="margin-top:4px">Entrar</button>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+  <div class="sb-ov" id="sb-ov"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sb" id="sb">
+    <div class="sb-hd">
+      <img class="sb-logo" src="https://muffatofoods.com.br/assets/images/foods_logo.png" alt="M">
+      <div class="sb-brand">
+        <div class="sb-sig">SIG<em>MAN</em></div>
+        <div class="sb-sub2">Muffato Foods</div>
+      </div>
+    </div>
+    <nav class="sb-nav" id="sb-nav"></nav>
+    <div class="sb-ft">
+      <div class="sb-usr">
+        <div class="u-av" id="u-av">A</div>
+        <div class="u-info">
+          <div class="u-nm" id="u-nm">Usuário</div>
+          <div class="u-rl" id="u-rl">Perfil</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <header class="tb">
+      <button class="tb-tog" id="btn-sb-tog">☰</button>
+      <div class="tb-title" id="tb-t">Dashboard</div>
+      <div class="tb-r">
+        <div class="tb-stat" id="tb-stat">
+          <span id="th-hj">0</span> OS hoje
+        </div>
+        <button class="tb-btn" id="th-btn" title="Alternar tema">🌙</button>
+        <button class="tb-btn" id="btn-logout" title="Sair">⎋</button>
+      </div>
+    </header>
+
+    <!-- CONTEÚDO -->
+    <main class="cont">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="pg" id="pg-dashboard">
+        <div class="ph" style="flex-wrap:wrap;align-items:center;gap:8px">
+          <div class="pt"><small>Visão Geral</small>Dashboard</div>
+          <select id="dash-periodo" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);padding:5px 10px;font-size:12px;font-family:var(--fw);font-weight:600;cursor:pointer">
+            <option value="dia">Hoje</option>
+            <option value="semana">Últimos 7 dias</option>
+            <option value="mes" selected>Mês</option>
+            <option value="3m">Últimos 3 meses</option>
+            <option value="ano">Ano</option>
+          </select>
+          <div style="display:flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:5px 10px;flex-shrink:0">
+            <span class="rf-dot off" id="rf-dot"></span>
+            <button class="btn btn-sm btn-gh" id="btn-dash-refresh" style="padding:4px 10px">🔄 Atualizar</button>
+            <button class="btn btn-sm" id="rf-btn" style="background:var(--surf3);color:var(--txt2);border:1px solid var(--bord);border-radius:var(--rs);padding:4px 10px;cursor:pointer;font-size:11px;font-family:var(--fw);font-weight:700">▶ 15s</button>
+            <span id="rf-lbl" style="font-size:11px;color:var(--txt3);white-space:nowrap">Desligada</span>
+          </div>
+          <button class="btn btn-sm btn-gh" id="btn-dash-pdf" style="margin-left:auto;padding:5px 12px">📄 PDF</button>
+        </div>
+        <div id="dash-banner"></div>
+        <div id="offline-banner">⚠️ <strong>Modo offline</strong> — exibindo dados do cache local.</div>
+        <div class="stats" id="d-stats"></div>
+        <div class="tri-col">
+          <div class="card"><div class="card-t">Disponibilidade do Período</div><div id="d-gauge"></div></div>
+          <div class="card"><div class="card-t">Meta PCM — % Preventiva</div><div id="d-pcm-ring"></div></div>
+          <div class="card"><div class="card-t">Tendência — OS por Mês</div><div id="d-trend"></div></div>
+        </div>
+        <div class="two-col">
+          <div class="card"><div class="card-t">O.S. Planejadas em Aberto</div><div id="d-plan"></div></div>
+          <div class="card"><div class="card-t">Solicitações Pendentes</div><div id="d-sol"></div></div>
+        </div>
+        <div class="two-col">
+          <div class="card"><div class="card-t">🏭 Ranking Salas — Corretivas</div><div id="d-top-salas"></div></div>
+          <div class="card"><div class="card-t">🔧 Ranking Máquinas — Corretivas</div><div id="d-top-maq"></div></div>
+        </div>
+        <div class="two-col">
+          <div class="card"><div class="card-t">🔔 Próximas Preventivas</div><div id="d-proximas"></div></div>
+          <div class="card"><div class="card-t">Últimas O.S. Executadas</div><div id="d-rec"></div></div>
+        </div>
+      </div>
+
+      <!-- ══ O.S. EXECUTADAS ══ -->
+      <div class="pg" id="pg-executadas">
+        <div class="ph">
+          <div class="pt"><small>Histórico</small>O.S. Executadas</div>
+          <button class="btn btn-gh btn-sm" id="btn-export-csv">⬇ Exportar CSV</button>
+        </div>
+        <div class="fr">
+          <input type="text" id="fe-tx" placeholder="🔍 Buscar...">
+          <select id="fe-tp"><option value="">Todos os Tipos</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select>
+          <select id="fe-sl"><option value="">Todas as Salas</option></select>
+          <select id="fe-mn"><option value="">Todos os Manut.</option></select>
+          <input type="date" id="fe-dt-ini" title="Data inicial">
+          <input type="date" id="fe-dt-fim" title="Data final">
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th class="sortable" data-col="numero" style="width:110px">OS #</th>
+              <th class="sortable" data-col="data">Data</th>
+              <th class="sortable" data-col="sala">Sala</th>
+              <th class="sortable" data-col="maq">Máquina</th>
+              <th class="sortable" data-col="tipo">Tipo</th>
+              <th class="sortable" data-col="prioridade">Prioridade</th>
+              <th class="sortable" data-col="manut">Manutentor</th>
+              <th>Tempo</th>
+              <th style="min-width:160px">Ações</th>
+            </tr></thead>
+            <tbody id="tb-exec"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ ABERTURA O.S. ══ -->
+      <div class="pg" id="pg-abertura">
+        <div class="ph"><div class="pt"><small>Registro</small>Abertura de O.S.</div></div>
+        <div class="alert" id="al-ab"></div>
+        <div class="card">
+          <div class="card-t">Identificação</div>
+          <div class="fg-row">
+            <div class="fg"><label>Sala / Local</label><select id="ab-sl"><option value="">Selecione...</option></select></div>
+            <div class="fg"><label>Máquina / Ativo</label><select id="ab-mq"><option value="">Selecione a sala</option></select></div>
+            <div class="fg"><label>Tipo de Ação</label><select id="ab-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
+            <div class="fg"><label>Prioridade</label><select id="ab-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
+            <div class="fg"><label>Manutentor Responsável</label><input type="text" id="ab-mn" placeholder="Nome"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-t">Tempo de Intervenção</div>
+          <div class="fg-row fg-3">
+            <div class="fg"><label>Data</label><input type="date" id="ab-dt"></div>
+            <div class="fg"><label>Hora Início</label><input type="time" id="ab-in"></div>
+            <div class="fg"><label>Hora Fim</label><input type="time" id="ab-fm"></div>
+            <div class="fg"><label>Tempo de Parada (min)</label><input type="number" id="ab-parada" placeholder="0" min="0"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-t">Descrição</div>
+          <div class="fg"><label>Problema / Ocorrência</label><textarea id="ab-pb" placeholder="Descreva o problema..."></textarea></div>
+          <div class="fg" style="margin-top:10px"><label>Ação / Serviço Executado</label><textarea id="ab-ac" placeholder="Descreva o serviço..."></textarea></div>
+          <div class="fg" style="margin-top:10px">
+            <label>Ação Preventiva Identificada</label>
+            <textarea id="ab-ap" placeholder="Ação para evitar recorrência..." style="min-height:60px"></textarea>
+          </div>
+          <div class="fg" style="margin-top:10px">
+            <label>Foto da OS (opcional)</label>
+            <div class="photo-zone" id="ab-photo-zone">
+              <input type="file" id="ab-photo-input" accept="image/*" style="display:none">
+              <div id="ab-photo-preview"><span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="fa">
+          <button class="btn btn-gh" id="btn-ab-clear">Limpar</button>
+          <button class="btn btn-p" id="btn-ab-save">✓ Registrar Ordem</button>
+        </div>
+      </div>
+
+      <!-- ══ O.S. PLANEJADAS ══ -->
+      <div class="pg" id="pg-planejadas">
+        <div class="ph"><div class="pt"><small>Gestão</small>O.S. Planejadas</div></div>
+        <div class="fr">
+          <select id="fp-st"><option value="">Todos os Status</option><option>Pendente</option><option>Atrasada</option><option>Concluída</option></select>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th class="sortable" data-col="numero" style="width:100px">OS #</th>
+              <th class="sortable" data-col="sala">Sala</th>
+              <th class="sortable" data-col="maq">Máquina</th>
+              <th class="sortable" data-col="tipo">Tipo</th>
+              <th class="sortable" data-col="prioridade">Prioridade</th>
+              <th class="sortable" data-col="prazo">Prazo</th>
+              <th class="sortable" data-col="status">Status</th>
+              <th>Ações</th>
+            </tr></thead>
+            <tbody id="tb-plan"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ PLANEJAMENTO PCM ══ -->
+      <div class="pg" id="pg-planejamento">
+        <div class="ph"><div class="pt"><small>PCM</small>Planejamento de O.S.</div></div>
+        <div class="alert" id="al-pl"></div>
+        <div class="card">
+          <div class="card-t">Nova O.S. Planejada</div>
+          <div class="fg-row">
+            <div class="fg"><label>Sala / Local</label><select id="pl-sl"><option value="">Selecione...</option></select></div>
+            <div class="fg"><label>Máquina / Ativo</label><select id="pl-mq"><option value="">Selecione a sala</option></select></div>
+            <div class="fg"><label>Tipo de Serviço</label><select id="pl-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
+            <div class="fg"><label>Prioridade</label><select id="pl-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
+            <div class="fg"><label>Prazo Limite</label><input type="date" id="pl-pz"></div>
+            <div class="fg"><label>Horas por Turno</label><input type="number" id="pl-horas" value="8" min="1" max="24"></div>
+            <div class="fg fg-full"><label>Descrição do Serviço Planejado</label><textarea id="pl-ds" placeholder="Descreva o serviço..."></textarea></div>
+          </div>
+          <div class="fa">
+            <button class="btn btn-gh" id="btn-pl-clear">Limpar</button>
+            <button class="btn btn-p" id="btn-pl-save">+ Criar O.S. Planejada</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SOLICITAÇÃO ══ -->
+      <div class="pg" id="pg-solicitacao">
+        <div class="ph"><div class="pt"><small>Produção</small>Solicitação de O.S.</div></div>
+        <div class="alert" id="al-sol"></div>
+        <div class="card">
+          <div class="card-t">Nova Solicitação</div>
+          <div class="fg-row">
+            <div class="fg"><label>Sala / Local</label><select id="sol-sl"><option value="">Selecione...</option></select></div>
+            <div class="fg"><label>Máquina / Ativo</label><select id="sol-mq"><option value="">Selecione a sala</option></select></div>
+            <div class="fg"><label>Tipo</label><select id="sol-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Melhoria</option></select></div>
+            <div class="fg"><label>Prioridade</label><select id="sol-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
+            <div class="fg fg-full"><label>Descrição do Problema</label><textarea id="sol-ds" placeholder="Descreva o problema..."></textarea></div>
+          </div>
+          <div class="fa">
+            <button class="btn btn-gh" id="btn-sol-clear">Limpar</button>
+            <button class="btn btn-p" id="btn-sol-save">Enviar Solicitação</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-t" style="justify-content:space-between">
+            <span style="display:flex;align-items:center;gap:8px"><span style="width:3px;height:14px;background:var(--red);border-radius:2px"></span>Solicitações Registradas</span>
+            <select id="sol-sort" style="font-family:var(--fw);font-size:11px;font-weight:700;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt2);padding:3px 8px;cursor:pointer">
+              <option value="numero-desc">Mais recente</option>
+              <option value="prioridade-asc">Prioridade</option>
+              <option value="status-asc">Status</option>
+            </select>
+          </div>
+          <div id="sol-lista"></div>
+        </div>
+      </div>
+
+      <!-- ══ INSPEÇÃO DIÁRIA ══ -->
+      <div class="pg" id="pg-inspecao">
+        <div class="ph">
+          <div class="pt"><small>Operação</small>Inspeção Diária</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-gh" id="btn-insp-rel">📋 Relatório WhatsApp</button>
+            <button class="btn btn-sm btn-p"  id="btn-insp-save">💾 Salvar Inspeção</button>
+          </div>
+        </div>
+        <div class="alert" id="al-insp"></div>
+        <div class="card">
+          <div class="card-t">Dados da Inspeção</div>
+          <div class="fg-row">
+            <div class="fg"><label>Data</label><input type="date" id="insp-dt"></div>
+            <div class="fg"><label>Turno</label><select id="insp-tn"><option>1º Turno</option><option>2º Turno</option><option>3º Turno</option></select></div>
+            <div class="fg"><label>Horas do Turno</label><input type="number" id="insp-horas" value="7" min="1" max="24"></div>
+            <div class="fg"><label>Manutentor</label><input type="text" id="insp-mn" placeholder="Nome"></div>
+          </div>
+        </div>
+        <div id="insp-secs"></div>
+        <div class="fa">
+          <button class="btn btn-gh btn-sm" id="btn-insp-rel2">📋 Gerar Relatório WhatsApp</button>
+          <button class="btn btn-p" id="btn-insp-save2">💾 Salvar Inspeção</button>
+        </div>
+      </div>
+
+      <!-- ══ INSPEÇÃO TEMPLATE (PCM) ══ -->
+      <div class="pg" id="pg-inspecao-tmpl">
+        <div class="ph">
+          <div class="pt"><small>PCM · Qualidade</small>Templates de Inspeção</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm btn-gh" id="btn-insp-rota-print">🖨️ Imprimir Rota</button>
+            <button class="btn btn-sm btn-gh" id="btn-insp-maq-print">🖨️ Imprimir Mecânica/Elétrica</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-t">Selecionar Template</div>
+          <div class="fg-row">
+            <div class="fg"><label>Tipo de Inspeção</label>
+              <select id="insp-tmpl-tipo">
+                <option value="rota">Inspeção de Rota</option>
+                <option value="maquina">Inspeção Mecânica / Elétrica</option>
+              </select>
+            </div>
+            <div class="fg"><label>Sala (filtro)</label><select id="insp-tmpl-sala"><option value="">Todas as Salas</option></select></div>
+            <div class="fg"><label>Data</label><input type="date" id="insp-tmpl-dt"></div>
+            <div class="fg"><label>Manutentor</label><input type="text" id="insp-tmpl-mn" placeholder="Nome"></div>
+          </div>
+        </div>
+        <div id="insp-tmpl-body"></div>
+        <div class="fa"><button class="btn btn-p" id="btn-insp-tmpl-save">💾 Salvar Inspeção</button></div>
+      </div>
+
+      <!-- ══ PREVENTIVA ══ -->
+      <div class="pg" id="pg-preventiva">
+        <div class="ph">
+          <div class="pt"><small>PCM · Manutenção</small>Ordem de Manutenção Preventiva</div>
+          <button class="btn btn-sm btn-gh" id="btn-prev-print">🖨️ Imprimir Ordem</button>
+        </div>
+        <div class="card">
+          <div class="card-t">Dados da Preventiva</div>
+          <div class="fg-row">
+            <div class="fg"><label>Máquina / Ativo</label><select id="prev-maq"><option value="">Selecione...</option></select></div>
+            <div class="fg"><label>Data Execução</label><input type="date" id="prev-dt"></div>
+            <div class="fg"><label>Manutentor</label><input type="text" id="prev-mn" placeholder="Nome"></div>
+            <div class="fg"><label>Periodicidade</label>
+              <select id="prev-periodo"><option>Diária</option><option>Semanal</option><option selected>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option></select>
+            </div>
+          </div>
+        </div>
+        <div id="prev-body"></div>
+        <div class="fa"><button class="btn btn-p" id="btn-prev-save">💾 Salvar Preventiva</button></div>
+      </div>
+
+      <!-- ══ ANÁLISE DE CAUSA RAIZ ══ -->
+      <div class="pg" id="pg-analise-causa-raiz">
+        <div class="ph">
+          <div class="pt"><small>PCM · Qualidade</small>Análise de Causa Raiz</div>
+          <button class="btn btn-sm btn-p" id="btn-novo-rac">+ Novo RAC</button>
+        </div>
+        <div class="alert" id="al-rac"></div>
+        <div class="card">
+          <div class="card-t">RAC — Em Aberto</div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>ID</th><th>Data</th><th>Equipamento</th><th>Falha</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="tb-rac-abertos"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-t">RAC — Encerrados</div>
+          <div class="tw">
+            <table>
+              <thead><tr><th>ID</th><th>Data</th><th>Equipamento</th><th>Encerrado em</th><th>Ações</th></tr></thead>
+              <tbody id="tb-rac-fechados"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ATIVOS ══ -->
+      <div class="pg" id="pg-ativos">
+        <div class="ph"><div class="pt"><small>Cadastro</small>Ativos</div></div>
+        <div class="two-col">
+          <div>
+            <div class="card"><div class="card-t">Criticidade das Máquinas</div><div id="at-crit-chart"></div></div>
+            <div class="card">
+              <div class="card-t">Nova Sala / Local</div>
+              <div class="fg"><label>Nome da Sala</label><input type="text" id="at-sn" placeholder="Ex: Carne Moída"></div>
+              <button class="btn btn-p btn-sm" id="btn-at-add-sala">+ Adicionar</button>
+            </div>
+            <div class="card"><div class="card-t">Salas Cadastradas</div><div id="at-sl"></div></div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-t">Nova Máquina / Ativo</div>
+              <div class="fg"><label>Sala</label><select id="at-ms"><option value="">Selecione...</option></select></div>
+              <div class="fg"><label>Nome da Máquina</label><input type="text" id="at-mn" placeholder="Ex: Cubadora"></div>
+              <div class="fg"><label>Tag / Código</label><input type="text" id="at-mt" placeholder="Ex: CUB-001"></div>
+              <div class="fg"><label>Criticidade</label>
+                <select id="at-mc"><option value="1">1 – Crítico</option><option value="2">2 – Alta</option><option value="3" selected>3 – Média</option><option value="4">4 – Baixa</option></select>
+              </div>
+              <div class="fg"><label>Periodicidade Preventiva</label>
+                <select id="at-mp"><option>Diária</option><option>Semanal</option><option selected>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option></select>
+              </div>
+              <button class="btn btn-p btn-sm" id="btn-at-add-maq">+ Adicionar</button>
+            </div>
+            <div class="card">
+              <div class="card-t" style="justify-content:space-between">
+                <span style="display:flex;align-items:center;gap:8px"><span style="width:3px;height:14px;background:var(--red);border-radius:2px"></span>Máquinas Cadastradas</span>
+                <select id="at-ml-fil" style="font-size:12px;background:var(--inp);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);padding:4px 8px;outline:none;max-width:160px">
+                  <option value="">Todas as Salas</option>
+                </select>
+              </div>
+              <div id="at-ml"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ USUÁRIOS ══ -->
+      <div class="pg" id="pg-usuarios">
+        <div class="ph"><div class="pt"><small>Administração</small>Gestão de Usuários</div></div>
+        <div class="alert" id="al-usr"></div>
+        <div class="card">
+          <div class="card-t">Usuários do Sistema</div>
+          <div id="pg-ul"></div>
+        </div>
+      </div>
+
+      <!-- ══ CONFIGURAÇÕES ══ -->
+      <div class="pg" id="pg-configuracoes">
+        <div class="ph"><div class="pt"><small>Sistema</small>Configurações</div></div>
+        <div class="card">
+          <div class="card-t">Parâmetros do Sistema</div>
+          <div id="cfg-body"></div>
+          <div class="fa"><button class="btn btn-p" id="btn-cfg-save">💾 Salvar</button></div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /.main -->
+</div><!-- /#app -->
+
+<!-- ══ MODAL: DETALHE OS ══ -->
+<div class="mb" id="m-det">
+  <div class="modal">
+    <div class="mhd">
+      <div><div class="osdisp" id="md-n"></div><div class="mtit" id="md-t"></div></div>
+      <button class="mcl" data-close="m-det">×</button>
+    </div>
+    <div id="md-b"></div>
+    <div id="md-wa" class="wa-prev" style="display:none"></div>
+    <button id="md-wa-btn"    class="wa-cp"   style="display:none">📋 Copiar para WhatsApp</button>
+    <button id="md-print-btn" class="wa-cp"   style="display:none;background:#444;margin-top:6px">🖨️ Imprimir O.S.</button>
+    <button id="md-rac-btn"   class="btn btn-p btn-sm" style="display:none;margin-top:8px">🔴 Gerar RAC</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: CONCLUIR OS ══ -->
+<div class="mb" id="m-con">
+  <div class="modal">
+    <div class="mhd"><div class="mtit">Concluir Ordem de Serviço</div><button class="mcl" data-close="m-con">×</button></div>
+    <div id="mc-inf"></div>
+    <div class="fg-row" style="margin-top:14px">
+      <div class="fg"><label>Manutentor</label><input type="text" id="mc-mn" placeholder="Nome"></div>
+      <div class="fg"><label>Data</label><input type="date" id="mc-dt"></div>
+      <div class="fg"><label>Hora Início</label><input type="time" id="mc-in"></div>
+      <div class="fg"><label>Hora Fim</label><input type="time" id="mc-fm"></div>
+      <div class="fg"><label>Tempo de Parada (min)</label><input type="number" id="mc-parada" placeholder="0" min="0"></div>
+      <div class="fg fg-full"><label>Serviço Executado</label><textarea id="mc-ds" placeholder="Descreva o que foi feito..."></textarea></div>
+    </div>
+    <div class="fa">
+      <button class="btn btn-gh" data-close="m-con">Cancelar</button>
+      <button class="btn btn-g"  id="btn-concluir">✓ Concluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: RELATÓRIO INSPEÇÃO ══ -->
+<div class="mb" id="m-rel">
+  <div class="modal" style="max-width:640px">
+    <div class="mhd"><div class="mtit">Relatório de Inspeção</div><button class="mcl" data-close="m-rel">×</button></div>
+    <div class="insp-report" id="m-rel-b"></div>
+    <button class="wa-cp" id="btn-copy-rel">📋 Copiar para WhatsApp</button>
+    <button class="wa-cp" id="btn-print-insp" style="background:#444;margin-top:6px">🖨️ Imprimir Inspeção</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: RAC ══ -->
+<div class="mb" id="mb-rac">
+  <div class="modal" style="max-width:860px">
+    <div class="mhd">
+      <div class="mtit">🔴 RAC — Análise de Causa Raiz</div>
+      <button class="mcl" data-close="mb-rac">×</button>
+    </div>
+    <div class="card"><div class="card-t">1 — Identificação</div>
+      <div class="fg-row">
+        <div class="fg"><label>Sala</label><select id="rac-sala"><option value="">Selecione...</option></select></div>
+        <div class="fg"><label>Equipamento</label><select id="rac-equip"><option value="">Selecione a sala</option></select></div>
+        <div class="fg"><label>Data</label><input type="date" id="rac-data"></div>
+        <div class="fg"><label>Hora da Parada</label><input type="time" id="rac-hora"></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-t">2 — Falha / Defeito Identificado</div>
+      <div class="fg"><textarea id="rac-falha" placeholder="Descrever a falha..."></textarea></div>
+    </div>
+    <div class="card"><div class="card-t">3 — Causa Raiz</div>
+      <div class="fg"><textarea id="rac-causa" placeholder="Análise detalhada da causa..."></textarea></div>
+    </div>
+    <div class="card"><div class="card-t">4 — Análise dos 5 Porquês</div>
+      <div class="fg"><label>1º Porquê</label><input type="text" id="rac-p1"></div>
+      <div class="fg"><label>2º Porquê</label><input type="text" id="rac-p2"></div>
+      <div class="fg"><label>3º Porquê</label><input type="text" id="rac-p3"></div>
+      <div class="fg"><label>4º Porquê</label><input type="text" id="rac-p4"></div>
+      <div class="fg"><label>5º Porquê (Raiz)</label><input type="text" id="rac-p5"></div>
+    </div>
+    <div class="card"><div class="card-t">5 — Ação Imediata</div>
+      <div class="fg"><textarea id="rac-imediata" placeholder="Ação imediata realizada..."></textarea></div>
+    </div>
+    <div class="card"><div class="card-t">6 — Ação Preventiva</div>
+      <div class="fg"><textarea id="rac-preventiva" placeholder="Ação para evitar recorrência..."></textarea></div>
+    </div>
+    <div class="card"><div class="card-t">7 — Equipe Responsável</div>
+      <div class="fg"><label>Resp. Produção</label><input type="text" id="rac-resp-prod"></div>
+      <div class="fg"><label>Resp. Manutenção</label><input type="text" id="rac-resp-manu"></div>
+      <div class="fg"><label>Executantes</label><input type="text" id="rac-exec"></div>
+    </div>
+    <div class="fa">
+      <button class="btn btn-gh" data-close="mb-rac">Cancelar</button>
+      <button class="btn btn-gh" id="btn-rac-print">🖨️ Imprimir</button>
+      <button class="btn btn-p"  id="btn-rac-save">💾 Salvar RAC</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: EDITAR ══ -->
+<div class="mb" id="m-edit">
+  <div class="modal" style="max-width:400px">
+    <div class="mhd"><div class="mtit" id="me-t">Editar</div><button class="mcl" data-close="m-edit">×</button></div>
+    <div id="me-b"></div>
+    <div class="fa">
+      <button class="btn btn-gh" data-close="m-edit">Cancelar</button>
+      <button class="btn btn-p"  id="btn-edit-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div id="toast-cont"></div>
+
+<!-- ══ ENTRY POINT ══ -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
