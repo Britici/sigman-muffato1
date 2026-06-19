@@ -29,18 +29,21 @@ let _pcmOpen = true;
 export function buildNav() {
   const nav = document.getElementById('sb-nav');
   if (!nav || !CU) return;
-  const ok = ROLES[CU.perfil]?.menus || [];
+
+  const role   = ROLES[CU.perfil];
+  const menus  = role?.menus  || [];
+  const pcmSub = role?.pcmSub || [];
   nav.innerHTML = '';
 
-  NAV.filter(n => ok.includes(n.id)).forEach(n => {
+  NAV.filter(n => menus.includes(n.id)).forEach(n => {
     if (n.sub) {
+      // Grupo PCM: visibilidade dos subitens vem de pcmSub do perfil,
+      // não de 'menus' (que só guarda o id do grupo 'pcm').
+      const visibleSubs = n.sub.filter(s => pcmSub.includes(s.id));
+      if (!visibleSubs.length) return;
+
       const grp = document.createElement('div');
       grp.className = 'nv-grp' + (_pcmOpen ? ' nv-grp-open' : '');
-      const visibleSubs = n.sub.filter(s => {
-        // subitens PCM: só admin/planejamento vê tudo
-        return ok.includes(s.id);
-      });
-      if (!visibleSubs.length) return;
       grp.innerHTML = `
         <div class="nv-grp-hd" onclick="window._togglePCM(this)">
           <div class="nv-ic">${n.ic}</div>
@@ -118,7 +121,7 @@ export function closeSB() {
 }
 
 export function toggleTheme() {
-  const h   = document.documentElement;
+  const h    = document.documentElement;
   const dark = h.getAttribute('data-theme') === 'dark';
   h.setAttribute('data-theme', dark ? 'light' : 'dark');
   const btn = document.getElementById('th-btn');

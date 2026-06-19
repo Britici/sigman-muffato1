@@ -6,6 +6,7 @@
 
 import { getDB } from './api.js';
 import { showToast } from './utils.js';
+import { podeAcessar } from './auth.js';
 
 // Mapa hash → { title, pageId, loader }
 // loader é importado dinamicamente — só carrega quando necessário
@@ -49,6 +50,21 @@ export async function navigate(hash) {
   const route = ROUTES[hash];
   if (!route) {
     console.warn('[router] Rota não encontrada:', hash);
+    return;
+  }
+
+  // ── Guarda de permissão ──────────────────────────────────────
+  // Mesmo com a nav escondendo itens, um usuário pode digitar o
+  // hash direto na URL (#usuarios, #ativos, etc). Bloqueia aqui
+  // antes de montar a página, independente do que a UI mostra.
+  if (!podeAcessar(hash)) {
+    showToast('Você não tem permissão para acessar esta página.', 'er');
+    // Redireciona para o hash anterior válido, ou dashboard como fallback
+    if (_currentRoute && podeAcessar(_currentRoute)) {
+      location.hash = _currentRoute;
+    } else {
+      location.hash = 'dashboard';
+    }
     return;
   }
 
