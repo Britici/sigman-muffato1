@@ -3,7 +3,7 @@
 // Login, sessão e controle de menus por perfil
 // ============================================================
 
-import { getDB, syncAll } from './api.js';
+import { getDB, saveDB, syncAll } from './api.js';
 import { sv, showToast } from './utils.js';
 import { initRouter, goTo } from './router.js';
 import { buildNav, updateNavDots } from './nav.js';
@@ -69,6 +69,82 @@ async function _checkSenha(user, senhaPlana) {
   return false;
 }
 
+// ── Troca obrigatória de senha (primeiro acesso ou pós-reset) ──
+// Modal criado dinamicamente em JS (reaproveita as classes .mb/.modal
+// já existentes no CSS) para não depender de marcação fixa no index.html.
+// Sem botão de fechar — só resolve a Promise quando a senha é trocada
+// com sucesso, bloqueando a entrada no app até lá.
+function _forcarTrocaSenha() {
+  return new Promise((resolve) => {
+    // Esconde a tela de login para que o listener global de Enter
+    // (ligado em #login-screen) não chame doLogin() de novo enquanto
+    // este modal estiver aberto.
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) loginScreen.style.display = 'none';
+
+    let overlay = document.getElementById('m-troca-senha');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'm-troca-senha';
+      overlay.className = 'mb on';
+      overlay.innerHTML = `
+        <div class="modal" style="max-width:420px">
+          <div class="mhd">
+            <div class="mtit">🔒 Troca de Senha Obrigatória</div>
+          </div>
+          <div class="alert inf show" style="display:block;font-size:12px;margin-bottom:14px">
+            Este é seu primeiro acesso (ou sua senha foi resetada).
+            Defina uma nova senha para continuar.
+          </div>
+          <div class="fg">
+            <label>Nova senha</label>
+            <input type="password" id="ts-nova" placeholder="Mínimo 6 caracteres">
+          </div>
+          <div class="fg" style="margin-top:10px">
+            <label>Confirmar nova senha</label>
+            <input type="password" id="ts-conf" placeholder="Repita a nova senha">
+          </div>
+          <div id="ts-alert" class="alert er" style="display:none;margin-top:10px;font-size:12px"></div>
+          <div class="fa" style="margin-top:18px">
+            <button class="btn btn-p btn-sm" id="ts-btn-salvar">Salvar e Entrar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+    } else {
+      overlay.classList.add('on');
+    }
+
+    const elNova = document.getElementById('ts-nova');
+    const elConf = document.getElementById('ts-conf');
+    const elAl   = document.getElementById('ts-alert');
+    const elBtn  = document.getElementById('ts-btn-salvar');
+
+    const erro = (msg) => { elAl.textContent = msg; elAl.style.display = 'block'; };
+
+    const submeter = async () => {
+      const nova = elNova.value;
+      const conf = elConf.value;
+      elAl.style.display = 'none';
+
+      if (!nova || nova.length < 6) { erro('A senha deve ter ao menos 6 caracteres.'); return; }
+      if (nova !== conf)             { erro('As senhas não coincidem.'); return; }
+      if (nova === CU.login)         { erro('A nova senha não pode ser igual ao login.'); return; }
+
+      CU.senhaHash = await hashPassword(nova);
+      CU.primeiroAcesso = false;
+      saveDB();
+
+      overlay.classList.remove('on');
+      overlay.remove();
+      elBtn.removeEventListener('click', submeter);
+      resolve();
+    };
+
+    elBtn.addEventListener('click', submeter);
+    elConf.addEventListener('keydown', (e) => { if (e.key === 'Enter') submeter(); });
+  });
+}
+
 export async function doLogin() {
   const login = document.getElementById('l-u')?.value?.trim();
   const senha = document.getElementById('l-p')?.value?.trim();
@@ -84,6 +160,11 @@ export async function doLogin() {
   CU = user;
   // Nunca persistir a senha em texto puro na sessão
   localStorage.setItem('sigman_sess', JSON.stringify({ login }));
+
+  if (CU.primeiroAcesso) {
+    await _forcarTrocaSenha();
+  }
+
   await enterApp();
 }
 
@@ -103,6 +184,9 @@ export async function tryAutoLogin() {
     const user = db.usuarios.find(u => u.login === login && u.ativo !== false);
     if (!user) { localStorage.removeItem('sigman_sess'); return false; }
     CU = user;
+    if (CU.primeiroAcesso) {
+      await _forcarTrocaSenha();
+    }
     await enterApp();
     return true;
   } catch (e) {

@@ -44,7 +44,14 @@ const PAGE_LOADERS = {
 };
 
 let _currentRoute = null;
+let _routerStarted = false; // garante que o listener de hashchange só seja registrado 1x por carregamento de página
+let _defaultRoute  = 'dashboard';
 const _loaded = {}; // cache de módulos já importados
+
+function _onHashChange() {
+  const hash = location.hash.replace('#', '') || _defaultRoute;
+  navigate(hash);
+}
 
 export async function navigate(hash) {
   const route = ROUTES[hash];
@@ -104,10 +111,12 @@ export function getCurrentRoute() { return _currentRoute; }
 
 // Inicializa o roteamento por hash
 export function initRouter(defaultRoute = 'dashboard') {
-  window.addEventListener('hashchange', () => {
-    const hash = location.hash.replace('#', '') || defaultRoute;
-    navigate(hash);
-  });
+  _defaultRoute = defaultRoute;
+
+  if (!_routerStarted) {
+    window.addEventListener('hashchange', _onHashChange);
+    _routerStarted = true;
+  }
 
   // Rota inicial
   const initial = location.hash.replace('#', '') || defaultRoute;
