@@ -233,7 +233,7 @@ async function _saveForm() {
       return;
     }
     const senhaHash = await hashPassword(login); // senha provisória = login
-    db.usuarios.push({ login, nome, perfil, senhaHash, ativo: true });
+    db.usuarios.push({ login, nome, perfil, senhaHash, ativo: true, primeiroAcesso: true });
   }
 
   saveDB();
@@ -251,6 +251,7 @@ async function _resetSenha(login) {
   if (!u) return;
 
   u.senhaHash = await hashPassword(login);
+  u.primeiroAcesso = true;
   saveDB();
   showToast(`Senha de ${u.nome} resetada para o padrão.`, 'ok');
 }
