@@ -8,6 +8,16 @@ import { CU, ROLES, hashPassword, isAdmin } from '../auth.js';
 import { showToast, openM, closeM } from '../utils.js';
 
 let _editId = null; // login do usuário em edição (null = criando novo)
+let _showInactive = false; // exibir usuários desativados na lista
+let _sortCol = 'nome';     // coluna ordenada atualmente
+let _sortDir = 'asc';      // 'asc' | 'desc'
+
+const COLS = [
+  { key: 'nome',   label: 'Nome'   },
+  { key: 'login',  label: 'Login'  },
+  { key: 'perfil', label: 'Perfil' },
+  { key: 'status', label: 'Status' },
+];
 
 export function init() {
   render();
@@ -30,29 +40,86 @@ export function render() {
   }
 
   const db = getDB();
+  const inactiveCount = db.usuarios.filter(u => u.ativo === false).length;
+
+  const list = db.usuarios
+    .filter(u => _showInactive || u.ativo !== false)
+    .sort((a, b) => {
+      const r = _compareUsuarios(a, b, _sortCol);
+      return _sortDir === 'asc' ? r : -r;
+    });
 
   root.innerHTML = `
-    <div class="fa" style="margin-bottom:14px">
+    <div class="fa" style="margin-bottom:14px;justify-content:space-between">
       <button class="btn btn-p btn-sm" id="btn-usr-novo">+ Novo Usuário</button>
+      <button class="btn btn-gh btn-sm" id="btn-usr-toggle-inativos">
+        ${_showInactive ? '🙈 Ocultar desativados' : `👁 Mostrar desativados${inactiveCount ? ` (${inactiveCount})` : ''}`}
+      </button>
     </div>
     <div class="tw">
       <table>
         <thead><tr>
-          <th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th style="min-width:170px">Ações</th>
+          ${COLS.map(_thHtml).join('')}
+          <th style="min-width:170px">Ações</th>
         </tr></thead>
         <tbody>
-          ${db.usuarios.map(_rowUsuario).join('')}
+          ${list.map(_rowUsuario).join('')}
         </tbody>
       </table>
     </div>`;
 
   document.getElementById('btn-usr-novo').onclick = () => _openForm(null);
+  document.getElementById('btn-usr-toggle-inativos').onclick = () => {
+    _showInactive = !_showInactive;
+    render();
+  };
 
-  db.usuarios.forEach(u => {
+  COLS.forEach(c => {
+    document.getElementById(`th-${c.key}`)?.addEventListener('click', () => _onSort(c.key));
+  });
+
+  list.forEach(u => {
     document.getElementById(`btn-edit-${u.login}`)?.addEventListener('click', () => _openForm(u.login));
     document.getElementById(`btn-reset-${u.login}`)?.addEventListener('click', () => _resetSenha(u.login));
     document.getElementById(`btn-toggle-${u.login}`)?.addEventListener('click', () => _toggleAtivo(u.login));
   });
+}
+
+function _thHtml(c) {
+  const active = _sortCol === c.key ? _sortDir : '';
+  return `<th class="sortable ${active}" id="th-${c.key}">${c.label}</th>`;
+}
+
+function _onSort(col) {
+  if (_sortCol === col) {
+    _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _sortCol = col;
+    _sortDir = 'asc';
+  }
+  render();
+}
+
+function _compareUsuarios(a, b, col) {
+  switch (col) {
+    case 'nome':
+      return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
+    case 'login':
+      return a.login.localeCompare(b.login, 'pt-BR', { sensitivity: 'base' });
+    case 'perfil': {
+      const la = ROLES[a.perfil]?.label || a.perfil;
+      const lb = ROLES[b.perfil]?.label || b.perfil;
+      return la.localeCompare(lb, 'pt-BR', { sensitivity: 'base' });
+    }
+    case 'status': {
+      // Ativos antes de inativos em ordem crescente
+      const sa = a.ativo !== false ? 0 : 1;
+      const sb = b.ativo !== false ? 0 : 1;
+      return sa - sb;
+    }
+    default:
+      return 0;
+  }
 }
 
 function _rowUsuario(u) {
@@ -64,9 +131,9 @@ function _rowUsuario(u) {
 
   return `
     <tr>
-      <td>${_esc(u.nome)}</td>
-      <td><code>${_esc(u.login)}</code></td>
-      <td>${_esc(roleLabel)}</td>
+      <td class="td-cap">${_esc(u.nome)}</td>
+      <td class="td-cap"><code>${_esc(u.login)}</code></td>
+      <td class="td-cap">${_esc(roleLabel)}</td>
       <td>${statusBadge}</td>
       <td>
         <button class="btn btn-sm btn-gh" id="btn-edit-${u.login}" title="Editar">✏️ Editar</button>
