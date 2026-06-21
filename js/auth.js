@@ -114,6 +114,14 @@ function _forcarTrocaSenha() {
       overlay.classList.add('on');
     }
 
+    // Trava de segurança: main.js tem um listener global em document que
+    // fecha QUALQUER elemento com classe .mb ao clicar no fundo escuro
+    // (document.addEventListener('click', e => { if (e.target.classList
+    // .contains('mb')) e.target.classList.remove('on') ... })).
+    // Esse modal é obrigatório — clicar fora não pode fechá-lo. Paramos
+    // a propagação no próprio overlay, antes do clique chegar em document.
+    overlay.onclick = (e) => e.stopPropagation();
+
     const elNova = document.getElementById('ts-nova');
     const elConf = document.getElementById('ts-conf');
     const elAl   = document.getElementById('ts-alert');
