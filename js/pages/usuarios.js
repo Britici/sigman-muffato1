@@ -9,8 +9,7 @@ import { showToast, openM, closeM } from '../utils.js';
 
 let _editId = null; // login do usuário em edição (null = criando novo)
 let _showInactive = false; // exibir usuários desativados na lista
-let _sortCol = 'nome';     // coluna ordenada atualmente
-let _sortDir = 'asc';      // 'asc' | 'desc'
+let _sort = { col: 'nome', dir: 'asc' }; // mesma forma de os-executadas.js
 
 const COLS = [
   { key: 'nome',   label: 'Nome'   },
@@ -45,8 +44,8 @@ export function render() {
   const list = db.usuarios
     .filter(u => _showInactive || u.ativo !== false)
     .sort((a, b) => {
-      const r = _compareUsuarios(a, b, _sortCol);
-      return _sortDir === 'asc' ? r : -r;
+      const r = _compareUsuarios(a, b, _sort.col);
+      return _sort.dir === 'asc' ? r : -r;
     });
 
   root.innerHTML = `
@@ -74,9 +73,7 @@ export function render() {
     render();
   };
 
-  COLS.forEach(c => {
-    document.getElementById(`th-${c.key}`)?.addEventListener('click', () => _onSort(c.key));
-  });
+  _bindSortHeaders();
 
   list.forEach(u => {
     document.getElementById(`btn-edit-${u.login}`)?.addEventListener('click', () => _openForm(u.login));
@@ -86,17 +83,19 @@ export function render() {
 }
 
 function _thHtml(c) {
-  const active = _sortCol === c.key ? _sortDir : '';
-  return `<th class="sortable ${active}" id="th-${c.key}">${c.label}</th>`;
+  const active = _sort.col === c.key ? _sort.dir : '';
+  return `<th class="sortable ${active}" data-col="${c.key}">${c.label}</th>`;
+}
+
+function _bindSortHeaders() {
+  document.querySelectorAll('#pg-usuarios th.sortable').forEach(th => {
+    th.addEventListener('click', () => _onSort(th.dataset.col));
+  });
 }
 
 function _onSort(col) {
-  if (_sortCol === col) {
-    _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    _sortCol = col;
-    _sortDir = 'asc';
-  }
+  _sort.dir = (_sort.col === col && _sort.dir === 'asc') ? 'desc' : 'asc';
+  _sort.col = col;
   render();
 }
 
