@@ -28,6 +28,7 @@ export function getDB() {
 export function saveDB() {
   try {
     localStorage.setItem('sigman_v2', JSON.stringify({
+      usuarios:     _db.usuarios,
       salas:        _db.salas,
       maquinas:     _db.maquinas,
       ordens:       _db.ordens,
@@ -50,12 +51,12 @@ function _loadFromStorage() {
     if (raw) {
       const parsed = JSON.parse(raw);
       const mock   = getMockDB();
-      // Mescla: dados locais prevalecem, mas usuários e configurações
-      // sempre vêm do mock (nunca ficam desatualizados no localStorage)
+      // Mescla: dados locais prevalecem. Configurações ainda vêm do mock
+      // (tela de configurações não persiste ainda — fica para quando
+      // configuracoes.js for implementado).
       return {
         ...mock,
         ...parsed,
-        usuarios:      mock.usuarios,
         configuracoes: mock.configuracoes,
       };
     }
