@@ -227,12 +227,8 @@ async function enterApp() {
   updateNavDots();
   updOSHoje();
 
-  // Rota inicial: primeiro menu visível do perfil (nunca 'pcm', que é só grupo)
-  const role  = ROLES[CU.perfil];
-  const menus = role?.menus || [];
-  let first   = menus.find(m => m !== 'pcm');
-  if (menus.includes('pcm') && !first) first = role.pcmSub?.[0];
-  initRouter(first || 'dashboard');
+  // Rota inicial: Dashboard para todos, exceto Produção → Abertura de O.S.
+  initRouter(CU.perfil === 'producao' ? 'os-abertura' : 'dashboard');
 
   // Sync em background
   syncAll(true).then(() => updateNavDots());
