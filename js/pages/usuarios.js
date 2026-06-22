@@ -166,6 +166,10 @@ function _openForm(login) {
         <input type="text" id="me-nome" value="${u ? _escAttr(u.nome) : ''}" placeholder="Ex: João da Silva">
       </div>
       <div class="fg" style="margin-top:10px">
+        <label>Cargo</label>
+        <input type="text" id="me-cargo" value="${u ? _escAttr(u.cargo || '') : ''}" placeholder="Ex: Técnico de Manutenção">
+      </div>
+      <div class="fg" style="margin-top:10px">
         <label>Login ${u ? '(não editável)' : '(gerado a partir do nome)'}</label>
         <input type="text" id="me-login" value="${u ? _escAttr(u.login) : ''}" placeholder="ex: joao.silva" ${u ? 'disabled' : ''}>
       </div>
@@ -194,6 +198,7 @@ function _openForm(login) {
 
 async function _saveForm() {
   const nome   = document.getElementById('me-nome')?.value?.trim();
+  const cargo  = document.getElementById('me-cargo')?.value?.trim() || '';
   const login  = document.getElementById('me-login')?.value?.trim().toLowerCase();
   const perfil = document.getElementById('me-perfil')?.value;
 
@@ -224,6 +229,7 @@ async function _saveForm() {
     }
 
     u.nome   = nome;
+    u.cargo  = cargo;
     u.perfil = perfil;
   } else {
     // ── Criação ──
@@ -232,7 +238,7 @@ async function _saveForm() {
       return;
     }
     const senhaHash = await hashPassword(login); // senha provisória = login
-    db.usuarios.push({ login, nome, perfil, senhaHash, ativo: true, primeiroAcesso: true });
+    db.usuarios.push({ login, nome, cargo, perfil, senhaHash, ativo: true, primeiroAcesso: true });
   }
 
   saveDB();
