@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
+  <script>window.SIGMAN_VER = '20260621a';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css">
+  <!-- LINHA 2/3 — CSS versionado automaticamente -->
+  <script>document.write('<link rel="stylesheet" href="css/main.css?v=' + window.SIGMAN_VER + '">');</script>
 </head>
 <body>
 
@@ -550,6 +553,12 @@
 <div id="toast-cont"></div>
 
 <!-- ══ ENTRY POINT ══ -->
-<script type="module" src="js/main.js"></script>
+<!-- LINHA 3/3 -->
+<script>
+  const s = document.createElement('script');
+  s.type = 'module';
+  s.src   = 'js/main.js?v=' + window.SIGMAN_VER;
+  document.body.appendChild(s);
+</script>
 </body>
 </html>
