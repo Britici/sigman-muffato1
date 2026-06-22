@@ -212,7 +212,7 @@ async function enterApp() {
   const ini = CU.nome.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   document.getElementById('u-av').textContent = ini;
   document.getElementById('u-nm').textContent = CU.nome;
-  document.getElementById('u-rl').textContent = ROLES[CU.perfil]?.label || CU.perfil;
+  document.getElementById('u-rl').textContent = CU.cargo || ROLES[CU.perfil]?.label || CU.perfil;
 
   // Contador OS hoje na topbar (oculto só para produção)
   const tbStat = document.getElementById('tb-stat');
