@@ -13,13 +13,11 @@ CREATE EXTENSION IF NOT EXISTS "unaccent";   -- buscas sem acento
 -- ============================================================
 
 CREATE TYPE perfil_tipo AS ENUM (
-    'administrador',
-    'supervisao',
-    'planejamento',
+    'admin',
+    'pcm',
     'manutencao',
-    'producao',
-    'gerencia',
-    'qualidade'
+    'administrativo',
+    'producao'
 );
 
 CREATE TYPE nivel_permissao AS ENUM (
@@ -83,6 +81,16 @@ CREATE TYPE periodicidade_tipo AS ENUM (
 
 CREATE TYPE criticidade_nivel AS ENUM ('A', 'B', 'C');
 
+-- Unidade da periodicidade preventiva cadastrada na Máquina (Ativos).
+-- Distinto de periodicidade_tipo (usado em preventiva_templates/execucoes),
+-- que permanece como está — fora do escopo desta reestruturação.
+CREATE TYPE periodicidade_unidade_tipo AS ENUM (
+    'dias',
+    'semanas',
+    'mes',
+    'ano'
+);
+
 -- ============================================================
 -- 1. USUARIOS
 -- ============================================================
@@ -143,16 +151,72 @@ CREATE OR REPLACE FUNCTION fn_permissao_efetiva(
 $$ LANGUAGE sql STABLE;
 
 -- ============================================================
--- 3. SALAS
+-- 3. HIERARQUIA DE ATIVOS: UNIDADES → LOCAIS → AMBIENTES → SALAS
+-- Nome sempre normalizado para MAIÚSCULAS no save (regra de app).
+-- Nome único por pai em cada nível (índice único composto).
+-- Sala nunca é excluída — só inativada/renomeada.
 -- ============================================================
 
+CREATE TABLE unidades (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome            VARCHAR(120) NOT NULL UNIQUE,
+    ativo           BOOLEAN      NOT NULL DEFAULT true,
+    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    atualizado_em   TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TABLE locais (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    unidade_id      UUID         NOT NULL REFERENCES unidades(id),
+    nome            VARCHAR(120) NOT NULL,
+    ativo           BOOLEAN      NOT NULL DEFAULT true,
+    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    atualizado_em   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    UNIQUE (unidade_id, nome)
+);
+
+CREATE INDEX idx_locais_unidade ON locais(unidade_id);
+
+CREATE TABLE ambientes (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    local_id        UUID         NOT NULL REFERENCES locais(id),
+    nome            VARCHAR(120) NOT NULL,
+    ativo           BOOLEAN      NOT NULL DEFAULT true,
+    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    atualizado_em   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    UNIQUE (local_id, nome)
+);
+
+CREATE INDEX idx_ambientes_local ON ambientes(local_id);
+
 CREATE TABLE salas (
-    id              VARCHAR(60)  PRIMARY KEY,    -- ex: 'TEMPERADOS', 'CARNE_MOÍDA'
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ambiente_id     UUID         NOT NULL REFERENCES ambientes(id),
     nome            VARCHAR(120) NOT NULL,
     descricao       TEXT,
     ativo           BOOLEAN      NOT NULL DEFAULT true,
-    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT now()
+    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    atualizado_em   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    UNIQUE (ambiente_id, nome)
 );
+
+CREATE INDEX idx_salas_ambiente ON salas(ambiente_id);
+
+-- ============================================================
+-- 3b. APROVADORES_LOCAL
+-- Quem pode aprovar OS por Sala (N:N). Cadastrado no próprio
+-- formulário de Sala em ativos.js — não espera a fase de
+-- Aprovação de OS.
+-- ============================================================
+
+CREATE TABLE aprovadores_local (
+    sala_id     UUID        NOT NULL REFERENCES salas(id) ON DELETE CASCADE,
+    usuario_id  UUID        NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    criado_em   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (sala_id, usuario_id)
+);
+
+CREATE INDEX idx_aprov_local_usuario ON aprovadores_local(usuario_id);
 
 -- ============================================================
 -- 4. FAMILIAS DE EQUIPAMENTO
@@ -170,24 +234,32 @@ CREATE TABLE familias_equipamento (
 
 -- ============================================================
 -- 5. MAQUINAS
+-- tag é única GLOBALMENTE (qualquer sala). nome PODE repetir.
+-- periodicidade vira número + unidade (valor padrão sugerido para
+-- o futuro template de preventiva).
 -- ============================================================
 
 CREATE TABLE maquinas (
-    id              VARCHAR(100) PRIMARY KEY,    -- ex: 'LÁCTEOS_FATIADORA_WEBER'
-    sala_id         VARCHAR(60)  NOT NULL REFERENCES salas(id),
-    familia_id      UUID         REFERENCES familias_equipamento(id),
-    nome            VARCHAR(200) NOT NULL,
-    tag             VARCHAR(50),
-    criticidade     SMALLINT     NOT NULL DEFAULT 3
-                    CHECK (criticidade BETWEEN 1 AND 4),
-    periodicidade   periodicidade_tipo NOT NULL DEFAULT 'Mensal',
-    descricao       TEXT,
-    ativo           BOOLEAN      NOT NULL DEFAULT true,
-    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    atualizado_em   TIMESTAMPTZ  NOT NULL DEFAULT now()
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sala_id                 UUID         NOT NULL REFERENCES salas(id),
+    familia_id              UUID         REFERENCES familias_equipamento(id),
+    nome                    VARCHAR(200) NOT NULL,
+    tag                     VARCHAR(50)  NOT NULL UNIQUE,
+    criticidade             SMALLINT     NOT NULL DEFAULT 3
+                            CHECK (criticidade BETWEEN 1 AND 4),
+    periodicidade_numero    INTEGER      NOT NULL DEFAULT 1
+                            CHECK (periodicidade_numero > 0),
+    periodicidade_unidade   periodicidade_unidade_tipo NOT NULL DEFAULT 'mes',
+    descricao               TEXT,
+    ativo                   BOOLEAN      NOT NULL DEFAULT true,
+    criado_em               TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    atualizado_em           TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
-COMMENT ON COLUMN maquinas.criticidade IS '1=crítico, 2=importante, 3=normal, 4=baixo';
+CREATE INDEX idx_maquinas_sala ON maquinas(sala_id);
+
+COMMENT ON COLUMN maquinas.criticidade IS '1=crítico (vermelho), 2=alta (laranja), 3=média (amarelo), 4=baixa (verde)';
+COMMENT ON COLUMN maquinas.periodicidade_numero IS 'Valor padrão sugerido ao criar o template de preventiva (fase futura)';
 
 -- ============================================================
 -- 6. ORDENS DE SERVICO
@@ -198,8 +270,8 @@ CREATE TABLE ordens_servico (
     id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     os_numero               VARCHAR(20) NOT NULL UNIQUE,  -- ex: OS-0146
     data                    DATE        NOT NULL,
-    sala_id                 VARCHAR(60) NOT NULL REFERENCES salas(id),
-    maquina_id              VARCHAR(100) REFERENCES maquinas(id),
+    sala_id                 UUID        NOT NULL REFERENCES salas(id),
+    maquina_id              UUID         REFERENCES maquinas(id),
     maquina_livre           VARCHAR(200),   -- quando maquina_id IS NULL (__outros__)
     tag_maquina             VARCHAR(50),
     tipo                    os_tipo     NOT NULL,
@@ -277,8 +349,8 @@ CREATE INDEX idx_intervalos_os ON os_intervalos(os_id);
 CREATE TABLE os_planejadas (
     id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     pl_numero           VARCHAR(20) NOT NULL UNIQUE,   -- ex: PL-0003
-    sala_id             VARCHAR(60) NOT NULL REFERENCES salas(id),
-    maquina_id          VARCHAR(100) REFERENCES maquinas(id),
+    sala_id             UUID        NOT NULL REFERENCES salas(id),
+    maquina_id          UUID         REFERENCES maquinas(id),
     maquina_livre       VARCHAR(200),
     tag_maquina         VARCHAR(50),
     tipo                os_tipo     NOT NULL,
@@ -315,8 +387,8 @@ CREATE INDEX idx_planejadas_prazo     ON os_planejadas(prazo_limite);
 CREATE TABLE solicitacoes (
     id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     sol_numero          VARCHAR(20) NOT NULL UNIQUE,   -- ex: SOL-0004
-    sala_id             VARCHAR(60) NOT NULL REFERENCES salas(id),
-    maquina_id          VARCHAR(100) REFERENCES maquinas(id),
+    sala_id             UUID        NOT NULL REFERENCES salas(id),
+    maquina_id          UUID         REFERENCES maquinas(id),
     maquina_livre       VARCHAR(200),
     tipo                os_tipo     NOT NULL,
     prioridade          SMALLINT    NOT NULL DEFAULT 3
@@ -343,6 +415,9 @@ CREATE INDEX idx_sol_status ON solicitacoes(status);
 -- ============================================================
 -- 10. PREVENTIVA_TEMPLATES
 -- Checklists por familia de equipamento
+-- TODO (fase futura, fora desta rodada): renomear a coluna
+-- "criticidade" (ENUM A/B/C) abaixo para "prioridade", para não
+-- colidir semanticamente com maquinas.criticidade (1-4).
 -- ============================================================
 
 CREATE TABLE preventiva_templates (
@@ -365,7 +440,7 @@ CREATE INDEX idx_prev_template_familia ON preventiva_templates(familia_id);
 
 CREATE TABLE preventiva_execucoes (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    maquina_id      VARCHAR(100) NOT NULL REFERENCES maquinas(id),
+    maquina_id      UUID         NOT NULL REFERENCES maquinas(id),
     template_id     UUID        REFERENCES preventiva_templates(id),
     tarefa          TEXT        NOT NULL,   -- cópia da tarefa no momento da execução
     periodicidade   periodicidade_tipo NOT NULL,
@@ -393,7 +468,7 @@ CREATE TABLE inspecoes_rota (
     turno           SMALLINT    CHECK (turno BETWEEN 1 AND 3),
     manutentor_id   UUID        REFERENCES usuarios(id),
     manutentor_nome VARCHAR(120),
-    sala_id         VARCHAR(60) REFERENCES salas(id),
+    sala_id         UUID        REFERENCES salas(id),
     ponto_inspecao  VARCHAR(200),
     item            VARCHAR(200),
     status          VARCHAR(30),
@@ -415,7 +490,7 @@ CREATE INDEX idx_insp_rota_data ON inspecoes_rota(data);
 CREATE TABLE inspecoes_maquina (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     data            DATE        NOT NULL,
-    maquina_id      VARCHAR(100) REFERENCES maquinas(id),
+    maquina_id      UUID         REFERENCES maquinas(id),
     maquina_nome    VARCHAR(200),
     tag             VARCHAR(50),
     manutentor_id   UUID        REFERENCES usuarios(id),
@@ -443,9 +518,9 @@ CREATE TABLE racr (
     data_abertura       DATE        NOT NULL DEFAULT CURRENT_DATE,
     os_id               UUID        REFERENCES ordens_servico(id),
     os_numero           VARCHAR(20),
-    maquina_id          VARCHAR(100) REFERENCES maquinas(id),
+    maquina_id          UUID         REFERENCES maquinas(id),
     maquina_nome        VARCHAR(200),
-    sala_id             VARCHAR(60) REFERENCES salas(id),
+    sala_id             UUID        REFERENCES salas(id),
     criticidade         SMALLINT    CHECK (criticidade BETWEEN 1 AND 4),
     tempo_parada_min    INTEGER,
     limite_min          INTEGER,
@@ -577,6 +652,22 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_usuarios_updated
     BEFORE UPDATE ON usuarios
+    FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
+
+CREATE TRIGGER trg_unidades_updated
+    BEFORE UPDATE ON unidades
+    FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
+
+CREATE TRIGGER trg_locais_updated
+    BEFORE UPDATE ON locais
+    FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
+
+CREATE TRIGGER trg_ambientes_updated
+    BEFORE UPDATE ON ambientes
+    FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
+
+CREATE TRIGGER trg_salas_updated
+    BEFORE UPDATE ON salas
     FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
 
 CREATE TRIGGER trg_maquinas_updated
