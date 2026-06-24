@@ -255,6 +255,13 @@ export function isAdmin() {
   return CU?.perfil === 'admin';
 }
 
+// Ativos: admin e pcm podem criar/editar/inativar em qualquer nível.
+// Nenhum outro perfil tem acesso à página (já garantido também pela
+// ausência de 'ativos' em ROLES[...].menus dos demais perfis).
+export function podeGerenciarAtivos() {
+  return CU?.perfil === 'admin' || CU?.perfil === 'pcm';
+}
+
 function lAlert(msg, type = 'err') {
   const el = document.getElementById('l-alert');
   if (!el) return;
