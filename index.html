@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
-  <script>window.SIGMAN_VER = '20260622a';</script>
+  <script>window.SIGMAN_VER = '20260623a';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -384,41 +384,8 @@
       <!-- ══ ATIVOS ══ -->
       <div class="pg" id="pg-ativos">
         <div class="ph"><div class="pt"><small>Cadastro</small>Ativos</div></div>
-        <div class="two-col">
-          <div>
-            <div class="card"><div class="card-t">Criticidade das Máquinas</div><div id="at-crit-chart"></div></div>
-            <div class="card">
-              <div class="card-t">Nova Sala / Local</div>
-              <div class="fg"><label>Nome da Sala</label><input type="text" id="at-sn" placeholder="Ex: Carne Moída"></div>
-              <button class="btn btn-p btn-sm" id="btn-at-add-sala">+ Adicionar</button>
-            </div>
-            <div class="card"><div class="card-t">Salas Cadastradas</div><div id="at-sl"></div></div>
-          </div>
-          <div>
-            <div class="card">
-              <div class="card-t">Nova Máquina / Ativo</div>
-              <div class="fg"><label>Sala</label><select id="at-ms"><option value="">Selecione...</option></select></div>
-              <div class="fg"><label>Nome da Máquina</label><input type="text" id="at-mn" placeholder="Ex: Cubadora"></div>
-              <div class="fg"><label>Tag / Código</label><input type="text" id="at-mt" placeholder="Ex: CUB-001"></div>
-              <div class="fg"><label>Criticidade</label>
-                <select id="at-mc"><option value="1">1 – Crítico</option><option value="2">2 – Alta</option><option value="3" selected>3 – Média</option><option value="4">4 – Baixa</option></select>
-              </div>
-              <div class="fg"><label>Periodicidade Preventiva</label>
-                <select id="at-mp"><option>Diária</option><option>Semanal</option><option selected>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option></select>
-              </div>
-              <button class="btn btn-p btn-sm" id="btn-at-add-maq">+ Adicionar</button>
-            </div>
-            <div class="card">
-              <div class="card-t" style="justify-content:space-between">
-                <span style="display:flex;align-items:center;gap:8px"><span style="width:3px;height:14px;background:var(--red);border-radius:2px"></span>Máquinas Cadastradas</span>
-                <select id="at-ml-fil" style="font-size:12px;background:var(--inp);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);padding:4px 8px;outline:none;max-width:160px">
-                  <option value="">Todas as Salas</option>
-                </select>
-              </div>
-              <div id="at-ml"></div>
-            </div>
-          </div>
-        </div>
+        <div class="alert" id="al-at"></div>
+        <div id="pg-at"></div>
       </div>
 
       <!-- ══ USUÁRIOS ══ -->
