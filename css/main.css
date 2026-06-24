@@ -9,7 +9,7 @@
   --bord:#2a3050; --bord2:#3a4568;
   --txt:#f4f6ff; --txt2:#b0bcd8; --txt3:#6b7aa0;
   --sb-bg:#0d0f18; --hd-bg:#0d0f18; --inp:#191c26;
-  --grn:#1fd988; --blu:#4096ff; --org:#f59e0b; --pur:#9b6dff;
+  --grn:#1fd988; --blu:#4096ff; --org:#f59e0b; --pur:#9b6dff; --yel:#e8c93a;
   --fw:'Barlow Condensed',sans-serif;
   --fb:'Barlow',sans-serif;
   --fm:'JetBrains Mono',monospace;
@@ -193,6 +193,15 @@ th.sortable::after{content:' ⇅';opacity:.35;font-size:10px}
 th.sortable.asc::after{content:' ▲';opacity:1;color:var(--red-l)}
 th.sortable.desc::after{content:' ▼';opacity:1;color:var(--red-l)}
 
+/* TH com filtro embutido (Ativos: colunas Unidade/Local/Ambiente/Sala) */
+.th-label.sortable{cursor:pointer;user-select:none;white-space:nowrap;display:inline-block}
+.th-label.sortable::after{content:' ⇅';opacity:.35;font-size:10px}
+.th-label.sortable.asc::after{content:' ▲';opacity:1;color:var(--red-l)}
+.th-label.sortable.desc::after{content:' ▼';opacity:1;color:var(--red-l)}
+th.th-fil select{display:block;margin-top:4px;width:100%;max-width:140px;font-size:11px;font-family:var(--fb);background:var(--inp);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);padding:3px 5px;outline:none}
+.hier-link{cursor:pointer;border-bottom:1px dashed var(--bord2);transition:color .15s}
+.hier-link:hover{color:var(--red-l)}
+
 /* BADGES */
 .badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:100px;font-family:var(--fw);font-size:11px;font-weight:700;font-variant:small-caps;letter-spacing:.03em;white-space:nowrap}
 .b-cor{background:rgba(196,18,48,.15);color:#ff4d65}
@@ -215,6 +224,22 @@ th.sortable.desc::after{content:' ▼';opacity:1;color:var(--red-l)}
 .b-c4{background:rgba(31,217,136,.13);color:var(--grn)}
 .pdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
 .d-1{background:#ff2244}.d-2{background:#ff5570}.d-3{background:var(--org)}.d-4{background:var(--grn)}
+
+/* CRITICIDADE DE ATIVOS — gradiente fixo vermelho(1)->laranja(2)->amarelo(3)->verde(4).
+   Classes dedicadas, não reaproveitam .b-c1..4 (cores diferentes, usadas em prioridade de OS). */
+.crit-1{background:rgba(196,18,48,.18);color:#ff2244;border:1px solid rgba(196,18,48,.4)}
+.crit-2{background:rgba(245,158,11,.16);color:var(--org);border:1px solid rgba(245,158,11,.35)}
+.crit-3{background:rgba(232,201,58,.16);color:var(--yel);border:1px solid rgba(232,201,58,.35)}
+.crit-4{background:rgba(31,217,136,.16);color:var(--grn);border:1px solid rgba(31,217,136,.35)}
+.crit-dot-1{background:#ff2244}.crit-dot-2{background:var(--org)}.crit-dot-3{background:var(--yel)}.crit-dot-4{background:var(--grn)}
+
+/* DROPDOWN (ex.: botão "+ Novo" de Ativos, com opções por nível) */
+.dd{position:relative;display:inline-block}
+.dd-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:200px;background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);box-shadow:var(--shad);z-index:120;display:none;overflow:hidden}
+.dd.open .dd-menu{display:block}
+.dd-item{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:transparent;border:none;color:var(--txt);font-family:var(--fb);font-size:13px;text-align:left;cursor:pointer;transition:background .15s}
+.dd-item:hover{background:var(--surf3)}
+.dd-item+.dd-item{border-top:1px solid var(--bord)}
 
 /* FILTER ROW */
 .fr{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
