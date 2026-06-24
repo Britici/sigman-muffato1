@@ -23,6 +23,18 @@
 // ⚠️ SHA-256 sem salt é proteção mínima client-side — NÃO usar
 // como hashing definitivo. O backend Express deverá re-hashear
 // com bcrypt/argon2 + salt na migração para PostgreSQL.
+//
+// REESTRUTURAÇÃO DE ATIVOS (2026-06-23):
+//   Hierarquia Unidade → Local → Ambiente → Sala → Máquina.
+//   Bootstrap automático com 1 unidade/local/ambiente cobrindo as
+//   19 salas já existentes — Tiago deve revisar/reorganizar pela
+//   tela de Ativos. maquinas[].salaId agora é FK real para
+//   salas[].id (antes era o NOME da sala em texto livre).
+//   maquinas[].periodicidade (string única) virou periodicidadeNumero
+//   + periodicidadeUnidade. ATENÇÃO: a tag '095-TER008' era
+//   duplicada na origem entre CÁRNEOS_TER008 e BACALHAU_TER008 —
+//   a segunda foi renomeada para '095-TER008-DUP2' como placeholder;
+//   corrigir para a tag física real assim que possível.
 // ============================================================
 
 export function getMockDB() {
@@ -76,98 +88,120 @@ export function getMockDB() {
     ],
 
     // ── Salas ────────────────────────────────────────────────
-    salas: [
-      { id:'CÁRNEOS',              nome:'CÁRNEOS',              ativo:true },
-      { id:'DEFUMADOS',            nome:'DEFUMADOS',            ativo:true },
-      { id:'LÁCTEOS',              nome:'LÁCTEOS',              ativo:true },
-      { id:'BACALHAU',             nome:'BACALHAU',             ativo:true },
-      { id:'LINGUIÇAS',            nome:'LINGUIÇAS',            ativo:true },
-      { id:'TEMPERADOS',           nome:'TEMPERADOS',           ativo:true },
-      { id:'PORCIONAMENTOS',       nome:'PORCIONAMENTOS',       ativo:true },
-      { id:'CARNE_MOÍDA',          nome:'CARNE MOÍDA',          ativo:true },
-      { id:'DESOSSA',              nome:'DESOSSA',              ativo:true },
-      { id:'SALMOURAS',            nome:'SALMOURAS',            ativo:true },
-      { id:'PIZZA',                nome:'PIZZA',                ativo:true },
-      { id:'SECUNDÁRIA',           nome:'SECUNDÁRIA',           ativo:true },
-      { id:'EMBALAGEM_SECUNDÁRIA', nome:'EMBALAGEM SECUNDÁRIA', ativo:true },
-      { id:'UTILIDADES',           nome:'UTILIDADES',           ativo:true },
-      { id:'DATA_CENTER',          nome:'DATA CENTER',          ativo:true },
-      { id:'LAVANDERIA',           nome:'LAVANDERIA',           ativo:true },
-      { id:'EFLUENTE_INDUSTRIAL',  nome:'EFLUENTE INDUSTRIAL',  ativo:true },
-      { id:'EXPEDIÇÃO',            nome:'EXPEDIÇÃO',            ativo:true },
-      { id:'RECEBIMENTO',          nome:'RECEBIMENTO',          ativo:true },
+
+    // ── Hierarquia de Ativos (Unidade → Local → Ambiente → Sala) ──
+    // Bootstrap: 1 unidade / 1 local / 1 ambiente cobrindo as 19 salas
+    // já existentes. Tiago deve revisar e reorganizar manualmente pela
+    // tela de Ativos (sem ferramenta de migração automática).
+    unidades: [
+      { id:'UNI_MUFFATO_PB', nome:'MUFFATO FOODS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
     ],
 
-    // ── Máquinas ─────────────────────────────────────────────
+    locais: [
+      { id:'LOC_PATO_BRANCO', unidadeId:'UNI_MUFFATO_PB', nome:'PATO BRANCO - PR', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+    ],
+
+    ambientes: [
+      { id:'AMB_PRODUCAO', localId:'LOC_PATO_BRANCO', nome:'PRODUÇÃO', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+    ],
+
+    salas: [
+      { id:'CÁRNEOS',              ambienteId:'AMB_PRODUCAO', nome:'CÁRNEOS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DEFUMADOS',            ambienteId:'AMB_PRODUCAO', nome:'DEFUMADOS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS',              ambienteId:'AMB_PRODUCAO', nome:'LÁCTEOS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'BACALHAU',             ambienteId:'AMB_PRODUCAO', nome:'BACALHAU', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LINGUIÇAS',            ambienteId:'AMB_PRODUCAO', nome:'LINGUIÇAS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'TEMPERADOS',           ambienteId:'AMB_PRODUCAO', nome:'TEMPERADOS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PORCIONAMENTOS',       ambienteId:'AMB_PRODUCAO', nome:'PORCIONAMENTOS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_MOÍDA',          ambienteId:'AMB_PRODUCAO', nome:'CARNE MOÍDA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA',              ambienteId:'AMB_PRODUCAO', nome:'DESOSSA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALMOURAS',            ambienteId:'AMB_PRODUCAO', nome:'SALMOURAS', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PIZZA',                ambienteId:'AMB_PRODUCAO', nome:'PIZZA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SECUNDÁRIA',           ambienteId:'AMB_PRODUCAO', nome:'SECUNDÁRIA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'EMBALAGEM_SECUNDÁRIA', ambienteId:'AMB_PRODUCAO', nome:'EMBALAGEM SECUNDÁRIA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'UTILIDADES',           ambienteId:'AMB_PRODUCAO', nome:'UTILIDADES', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DATA_CENTER',          ambienteId:'AMB_PRODUCAO', nome:'DATA CENTER', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LAVANDERIA',           ambienteId:'AMB_PRODUCAO', nome:'LAVANDERIA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'EFLUENTE_INDUSTRIAL',  ambienteId:'AMB_PRODUCAO', nome:'EFLUENTE INDUSTRIAL', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'EXPEDIÇÃO',            ambienteId:'AMB_PRODUCAO', nome:'EXPEDIÇÃO', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'RECEBIMENTO',          ambienteId:'AMB_PRODUCAO', nome:'RECEBIMENTO', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+    ],
+
+    // Sem aprovadores cadastrados ainda — Tiago define pela tela de
+    // Ativos (formulário de Sala), sem bloquear o uso do sistema.
+    aprovadoresLocal: [],
+
+    // ── Máquinas (sala_id agora é FK real para salas[].id, em vez do
+    // nome da sala como antes) ────────────────────────────────────
     maquinas: [
-      { id:'LÁCTEOS_FAT001',   sala:'LÁCTEOS',         nome:'FATIADORA AUTOMÁTICA WEBER WLN905',                                   tag:'095-FAT001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_TER005',   sala:'LÁCTEOS',         nome:'TERMOFORMADORA ULMA TFS700',                                          tag:'095-TER005', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_EST022',   sala:'LÁCTEOS',         nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999',                              tag:'095-EST022', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_EST021',   sala:'LÁCTEOS',         nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999 (PLATAFORMA)',                 tag:'095-EST021', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_BAL014',   sala:'LÁCTEOS',         nome:'CONJUNTO DE BALANÇAS WEBER CCW-500',                                  tag:'095-BAL014', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_EST020',   sala:'LÁCTEOS',         nome:'CONJUNTO DE ESTEIRAS BASCULANTE WEBER CCR500/CCA750',                 tag:'095-EST020', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_BAL013',   sala:'LÁCTEOS',         nome:'BALANÇA DE BANCADA TOLEDO 10-2090 (1)',                               tag:'095-BAL013', criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_BAL012',   sala:'LÁCTEOS',         nome:'BALANÇA DE BANCADA TOLEDO 10-2090 (2)',                               tag:'095-BAL012', criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'LÁCTEOS_ELE007',   sala:'LÁCTEOS',         nome:'ELEVADOR DE CARGAS ULMA EMS300',                                      tag:'095-ELE007', criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'CÁRNEOS_TER008',   sala:'CÁRNEOS',         nome:'TERMOFORMADORA ULMA TFS300',                                          tag:'095-TER008', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CÁRNEOS_FAT002',   sala:'CÁRNEOS',         nome:'FATIADORA AUTOMÁTICA WEBER WLN405',                                   tag:'095-FAT002', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CÁRNEOS_CUB003',   sala:'CÁRNEOS',         nome:'CUBADORA UNIVERSAL MHS 2000-105',                                     tag:'095-CUB003', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'CÁRNEOS_BAL015',   sala:'CÁRNEOS',         nome:'BALANÇA DE BANCADA TOLEDO 10-2090',                                   tag:'095-BAL015', criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'DEFUMADOS_SER006', sala:'DEFUMADOS',       nome:'SERRA FITA MONTEMIL SFM2850',                                         tag:'095-SER006', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'DEFUMADOS_TER007', sala:'DEFUMADOS',       nome:'TERMOFORMADORA ULMA TFS300',                                          tag:'095-TER007', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'BACALHAU_TER008',  sala:'BACALHAU',        nome:'TERMOFORMADORA ULMA TFS300',                                          tag:'095-TER008', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'BACALHAU_SFM3300', sala:'BACALHAU',        nome:'SERRA FITA',                                                          tag:'SFM3300',    criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'BACALHAU_EST025',  sala:'BACALHAU',        nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999',                              tag:'095-EST025', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'LINGUIÇAS_EMB002', sala:'LINGUIÇAS',       nome:'EMBUTIDEIRA HANDTMANN VF612',                                         tag:'095-EMB002', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'LINGUIÇAS_TER004', sala:'LINGUIÇAS',       nome:'TERMOFORMADORA ULMA TFS300',                                          tag:'095-TER004', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'LINGUIÇAS_ELE',    sala:'LINGUIÇAS',       nome:'ELEVADOR DE CARROS 200/300 LITROS',                                   tag:'CM1117100',  criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'TEMPERADOS_SEL002',sala:'TEMPERADOS',      nome:'SELADORA DUPLAVAC CV250-SHD',                                         tag:'095-SEL002', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'TEMPERADOS_ELE004',sala:'TEMPERADOS',      nome:'ELEVADOR DE CARROS SULMAK CM-11171',                                  tag:'095-ELE004', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'TEMPERADOS_TUM002',sala:'TEMPERADOS',      nome:'TUMBLER MAXMAC TB-253',                                               tag:'095-TUM002', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'TEMPERADOS_TER003',sala:'TEMPERADOS',      nome:'TERMOFORMADORA ULMA TFS300',                                          tag:'095-TER003', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'PORCION_ICONE700', sala:'PORCIONAMENTOS',  nome:'FATIADORA DADAUX',                                                    tag:'ICONE 700',  criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'PORCION_TFS300',   sala:'PORCIONAMENTOS',  nome:'TERMOFORMADORA ULMA TFS300',                                          tag:'TFS300',     criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_EMB001',     sala:'CARNE MOÍDA',     nome:'EMBUTIDEIRA HANDTMANN VF620',                                         tag:'095-EMB001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_FOR001',     sala:'CARNE MOÍDA',     nome:'FORMADORA HANDTMANN RF440',                                           tag:'095-FOR001', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_POR001',     sala:'CARNE MOÍDA',     nome:'PORCIONADORA HANDTMANN GMD 99-2',                                     tag:'095-POR001', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_SIS016',     sala:'CARNE MOÍDA',     nome:'SISTEMA DE PESAGEM HANDTMANN WS 910',                                 tag:'095-SIS016', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_EST014',     sala:'CARNE MOÍDA',     nome:'ESTEIRA TRANSPORTADORA JA SP600',                                     tag:'095-EST014', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_EST015',     sala:'CARNE MOÍDA',     nome:'ESTEIRA TRANSPORTADORA JA SP300',                                     tag:'095-EST015', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_TER001',     sala:'CARNE MOÍDA',     nome:'TERMOFORMADORA EMBALAGEM ULMA TFS600',                                tag:'095-TER001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_TER006',     sala:'CARNE MOÍDA',     nome:'TERMOFORMADORA ULMA TFS600',                                          tag:'095-TER006', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'CARNE_MOE002',     sala:'CARNE MOÍDA',     nome:'MOEDOR EKOMEX WW 200',                                                tag:'095-MOE002', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_SEL001',   sala:'DESOSSA',         nome:'SELADORA CRYOVAC VS95',                                               tag:'095-SEL001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_CUB004',   sala:'DESOSSA',         nome:'CUBADORA UNIVERSAL MHS 2000-105',                                     tag:'095-CUB004', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_SEC001',   sala:'DESOSSA',         nome:'SECADORA CRYOVAC RA06',                                               tag:'095-SEC001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_TUN001',   sala:'DESOSSA',         nome:'TÚNEL DE TERMOENCOLHIMENTO CRYOVAC STE98',                            tag:'095-TUN001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_ASE530',   sala:'DESOSSA',         nome:'ESFOLIADORA WEBER',                                                   tag:'ASE530',     criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_NOR001',   sala:'DESOSSA',         nome:'NÓRIA DE TRANSPORTE DE CARCAÇA SULMAQ HE-2',                         tag:'095-NOR001', criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_NOR002',   sala:'DESOSSA',         nome:'NÓRIA DE CARRETILHA SULMAQ 1000/2',                                   tag:'095-NOR002', criticidade:4, periodicidade:'Mensal', ativo:true },
-      { id:'DESOSSA_EST013',   sala:'DESOSSA',         nome:'CONJUNTO DE ESTEIRAS DA SALA PRINCIPAL DA DESOSSA SULMAQ EASY CLEAN', tag:'095-EST013', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_MOE001',      sala:'SALMOURAS',       nome:'MOEDOR MAXMAC SG 200',                                                tag:'095-MOE001', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_INJ001',      sala:'SALMOURAS',       nome:'INJETORA HENNEKEN HPI 450',                                           tag:'095-INJ001', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_MIS001',      sala:'SALMOURAS',       nome:'MISTURADOR DE SALMOURA HENNEKEN HVM-1000',                            tag:'095-MIS001', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_TUM001',      sala:'SALMOURAS',       nome:'TUMBLER HENNEKEN B2',                                                 tag:'095-TUM001', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_MIS002',      sala:'SALMOURAS',       nome:'MISTURADOR DE MASSAS EKOMEX ML500',                                   tag:'095-MIS002', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_ELE006',      sala:'SALMOURAS',       nome:'ELEVADOR MAXMAC EC-019',                                              tag:'095-ELE006', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_ELE005',      sala:'SALMOURAS',       nome:'ELEVADOR EKOMEX ZM200',                                               tag:'095-ELE005', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SALM_BAL007',      sala:'SALMOURAS',       nome:'BALANÇA DE PISO TOLEDO 2180',                                         tag:'095-BAL007', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'PIZZA_TER010',     sala:'PIZZA',           nome:'TERMOFORMADORA ULMA TFS200',                                          tag:'095-TER010', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'PIZZA_EST028',     sala:'PIZZA',           nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999',                              tag:'095-EST028', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'PIZZA_EST029',     sala:'PIZZA',           nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_12548_03',                           tag:'095-EST029', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'PIZZA_FAT003',     sala:'PIZZA',           nome:'FATIADORA MANUAL TOLEDO 9300 G COM',                                  tag:'095-FAT003', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'PIZZA_RAL001',     sala:'PIZZA',           nome:'RALADOR INDUSTRIAL EQUIMATEC RAL-04-CL',                              tag:'095-RAL001', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'SEC_EST032',       sala:'SECUNDÁRIA',      nome:'CONJUNTO DE ESTEIRAS DE SAIDA DEFUMADOS - POSTO 04',                  tag:'095-EST032', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SEC_EST030',       sala:'SECUNDÁRIA',      nome:'CONJUNTO DE ESTEIRAS DE SAIDA BACALHAU - POSTO 05',                   tag:'095-EST030', criticidade:3, periodicidade:'Mensal', ativo:true },
-      { id:'SEC_DET001',       sala:'SECUNDÁRIA',      nome:'DETECTOR DE METAIS - BIZERBA 600/300-IC (01)',                        tag:'095-DET001', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'SEC_DET002',       sala:'SECUNDÁRIA',      nome:'DETECTOR DE METAIS - BIZERBA 600/300-IC (02)',                        tag:'095-DET002', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'SEC_DET003',       sala:'SECUNDÁRIA',      nome:'DETECTOR DE METAIS - BIZERBA 600/300-IC (03)',                        tag:'095-DET003', criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'UTIL_GER',         sala:'UTILIDADES',      nome:'GERADORES',                                                            tag:'GER',        criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'UTIL_SUB',         sala:'UTILIDADES',      nome:'SUBESTAÇÕES',                                                          tag:'SUB',        criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'UTIL_CALD',        sala:'UTILIDADES',      nome:'CALDEIRA',                                                             tag:'CALD',       criticidade:1, periodicidade:'Mensal', ativo:true },
-      { id:'UTIL_ETE',         sala:'UTILIDADES',      nome:'ESTAÇÃO DE TRATAMENTO DE EFLUENTES',                                   tag:'ETE',        criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'LAV_SEC002',       sala:'LAVANDERIA',      nome:'SECADORA DE ROUPAS MAMUTE SE60',                                       tag:'095-SEC002', criticidade:2, periodicidade:'Mensal', ativo:true },
-      { id:'LAV_LAV008',       sala:'LAVANDERIA',      nome:'LAVADORA DE ROUPAS MAMUTE LEH60',                                      tag:'095-LAV008', criticidade:1, periodicidade:'Mensal', ativo:true },
+      { id:'LÁCTEOS_FAT001',     salaId:'LÁCTEOS',         nome:'FATIADORA AUTOMÁTICA WEBER WLN905',                                    tag:'095-FAT001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_TER005',     salaId:'LÁCTEOS',         nome:'TERMOFORMADORA ULMA TFS700',                                           tag:'095-TER005',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_EST022',     salaId:'LÁCTEOS',         nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999',                               tag:'095-EST022',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_EST021',     salaId:'LÁCTEOS',         nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999 (PLATAFORMA)',                  tag:'095-EST021',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_BAL014',     salaId:'LÁCTEOS',         nome:'CONJUNTO DE BALANÇAS WEBER CCW-500',                                   tag:'095-BAL014',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_EST020',     salaId:'LÁCTEOS',         nome:'CONJUNTO DE ESTEIRAS BASCULANTE WEBER CCR500/CCA750',                  tag:'095-EST020',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_BAL013',     salaId:'LÁCTEOS',         nome:'BALANÇA DE BANCADA TOLEDO 10-2090 (1)',                                tag:'095-BAL013',       criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_BAL012',     salaId:'LÁCTEOS',         nome:'BALANÇA DE BANCADA TOLEDO 10-2090 (2)',                                tag:'095-BAL012',       criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LÁCTEOS_ELE007',     salaId:'LÁCTEOS',         nome:'ELEVADOR DE CARGAS ULMA EMS300',                                       tag:'095-ELE007',       criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CÁRNEOS_TER008',     salaId:'CÁRNEOS',         nome:'TERMOFORMADORA ULMA TFS300',                                           tag:'095-TER008',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CÁRNEOS_FAT002',     salaId:'CÁRNEOS',         nome:'FATIADORA AUTOMÁTICA WEBER WLN405',                                    tag:'095-FAT002',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CÁRNEOS_CUB003',     salaId:'CÁRNEOS',         nome:'CUBADORA UNIVERSAL MHS 2000-105',                                      tag:'095-CUB003',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CÁRNEOS_BAL015',     salaId:'CÁRNEOS',         nome:'BALANÇA DE BANCADA TOLEDO 10-2090',                                    tag:'095-BAL015',       criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DEFUMADOS_SER006',   salaId:'DEFUMADOS',       nome:'SERRA FITA MONTEMIL SFM2850',                                          tag:'095-SER006',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DEFUMADOS_TER007',   salaId:'DEFUMADOS',       nome:'TERMOFORMADORA ULMA TFS300',                                           tag:'095-TER007',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'BACALHAU_TER008',    salaId:'BACALHAU',        nome:'TERMOFORMADORA ULMA TFS300',                                           tag:'095-TER008-DUP2',  criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'BACALHAU_SFM3300',   salaId:'BACALHAU',        nome:'SERRA FITA',                                                           tag:'SFM3300',          criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'BACALHAU_EST025',    salaId:'BACALHAU',        nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999',                               tag:'095-EST025',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LINGUIÇAS_EMB002',   salaId:'LINGUIÇAS',       nome:'EMBUTIDEIRA HANDTMANN VF612',                                          tag:'095-EMB002',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LINGUIÇAS_TER004',   salaId:'LINGUIÇAS',       nome:'TERMOFORMADORA ULMA TFS300',                                           tag:'095-TER004',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LINGUIÇAS_ELE',      salaId:'LINGUIÇAS',       nome:'ELEVADOR DE CARROS 200/300 LITROS',                                    tag:'CM1117100',        criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'TEMPERADOS_SEL002',  salaId:'TEMPERADOS',      nome:'SELADORA DUPLAVAC CV250-SHD',                                          tag:'095-SEL002',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'TEMPERADOS_ELE004',  salaId:'TEMPERADOS',      nome:'ELEVADOR DE CARROS SULMAK CM-11171',                                   tag:'095-ELE004',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'TEMPERADOS_TUM002',  salaId:'TEMPERADOS',      nome:'TUMBLER MAXMAC TB-253',                                                tag:'095-TUM002',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'TEMPERADOS_TER003',  salaId:'TEMPERADOS',      nome:'TERMOFORMADORA ULMA TFS300',                                           tag:'095-TER003',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PORCION_ICONE700',   salaId:'PORCIONAMENTOS',  nome:'FATIADORA DADAUX',                                                     tag:'ICONE 700',        criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PORCION_TFS300',     salaId:'PORCIONAMENTOS',  nome:'TERMOFORMADORA ULMA TFS300',                                           tag:'TFS300',           criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_EMB001',       salaId:'CARNE_MOÍDA',     nome:'EMBUTIDEIRA HANDTMANN VF620',                                          tag:'095-EMB001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_FOR001',       salaId:'CARNE_MOÍDA',     nome:'FORMADORA HANDTMANN RF440',                                            tag:'095-FOR001',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_POR001',       salaId:'CARNE_MOÍDA',     nome:'PORCIONADORA HANDTMANN GMD 99-2',                                      tag:'095-POR001',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_SIS016',       salaId:'CARNE_MOÍDA',     nome:'SISTEMA DE PESAGEM HANDTMANN WS 910',                                  tag:'095-SIS016',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_EST014',       salaId:'CARNE_MOÍDA',     nome:'ESTEIRA TRANSPORTADORA JA SP600',                                      tag:'095-EST014',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_EST015',       salaId:'CARNE_MOÍDA',     nome:'ESTEIRA TRANSPORTADORA JA SP300',                                      tag:'095-EST015',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_TER001',       salaId:'CARNE_MOÍDA',     nome:'TERMOFORMADORA EMBALAGEM ULMA TFS600',                                 tag:'095-TER001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_TER006',       salaId:'CARNE_MOÍDA',     nome:'TERMOFORMADORA ULMA TFS600',                                           tag:'095-TER006',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'CARNE_MOE002',       salaId:'CARNE_MOÍDA',     nome:'MOEDOR EKOMEX WW 200',                                                 tag:'095-MOE002',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_SEL001',     salaId:'DESOSSA',         nome:'SELADORA CRYOVAC VS95',                                                tag:'095-SEL001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_CUB004',     salaId:'DESOSSA',         nome:'CUBADORA UNIVERSAL MHS 2000-105',                                      tag:'095-CUB004',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_SEC001',     salaId:'DESOSSA',         nome:'SECADORA CRYOVAC RA06',                                                tag:'095-SEC001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_TUN001',     salaId:'DESOSSA',         nome:'TÚNEL DE TERMOENCOLHIMENTO CRYOVAC STE98',                             tag:'095-TUN001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_ASE530',     salaId:'DESOSSA',         nome:'ESFOLIADORA WEBER',                                                    tag:'ASE530',           criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_NOR001',     salaId:'DESOSSA',         nome:'NÓRIA DE TRANSPORTE DE CARCAÇA SULMAQ HE-2',                           tag:'095-NOR001',       criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_NOR002',     salaId:'DESOSSA',         nome:'NÓRIA DE CARRETILHA SULMAQ 1000/2',                                    tag:'095-NOR002',       criticidade:4, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'DESOSSA_EST013',     salaId:'DESOSSA',         nome:'CONJUNTO DE ESTEIRAS DA SALA PRINCIPAL DA DESOSSA SULMAQ EASY CLEAN',  tag:'095-EST013',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_MOE001',        salaId:'SALMOURAS',       nome:'MOEDOR MAXMAC SG 200',                                                 tag:'095-MOE001',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_INJ001',        salaId:'SALMOURAS',       nome:'INJETORA HENNEKEN HPI 450',                                            tag:'095-INJ001',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_MIS001',        salaId:'SALMOURAS',       nome:'MISTURADOR DE SALMOURA HENNEKEN HVM-1000',                             tag:'095-MIS001',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_TUM001',        salaId:'SALMOURAS',       nome:'TUMBLER HENNEKEN B2',                                                  tag:'095-TUM001',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_MIS002',        salaId:'SALMOURAS',       nome:'MISTURADOR DE MASSAS EKOMEX ML500',                                    tag:'095-MIS002',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_ELE006',        salaId:'SALMOURAS',       nome:'ELEVADOR MAXMAC EC-019',                                               tag:'095-ELE006',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_ELE005',        salaId:'SALMOURAS',       nome:'ELEVADOR EKOMEX ZM200',                                                tag:'095-ELE005',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SALM_BAL007',        salaId:'SALMOURAS',       nome:'BALANÇA DE PISO TOLEDO 2180',                                          tag:'095-BAL007',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PIZZA_TER010',       salaId:'PIZZA',           nome:'TERMOFORMADORA ULMA TFS200',                                           tag:'095-TER010',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PIZZA_EST028',       salaId:'PIZZA',           nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_99999',                               tag:'095-EST028',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PIZZA_EST029',       salaId:'PIZZA',           nome:'ESTEIRA TRANSPORTADORA SULMAQ CM_12548_03',                            tag:'095-EST029',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PIZZA_FAT003',       salaId:'PIZZA',           nome:'FATIADORA MANUAL TOLEDO 9300 G COM',                                   tag:'095-FAT003',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'PIZZA_RAL001',       salaId:'PIZZA',           nome:'RALADOR INDUSTRIAL EQUIMATEC RAL-04-CL',                               tag:'095-RAL001',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SEC_EST032',         salaId:'SECUNDÁRIA',      nome:'CONJUNTO DE ESTEIRAS DE SAIDA DEFUMADOS - POSTO 04',                   tag:'095-EST032',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SEC_EST030',         salaId:'SECUNDÁRIA',      nome:'CONJUNTO DE ESTEIRAS DE SAIDA BACALHAU - POSTO 05',                    tag:'095-EST030',       criticidade:3, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SEC_DET001',         salaId:'SECUNDÁRIA',      nome:'DETECTOR DE METAIS - BIZERBA 600/300-IC (01)',                         tag:'095-DET001',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SEC_DET002',         salaId:'SECUNDÁRIA',      nome:'DETECTOR DE METAIS - BIZERBA 600/300-IC (02)',                         tag:'095-DET002',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'SEC_DET003',         salaId:'SECUNDÁRIA',      nome:'DETECTOR DE METAIS - BIZERBA 600/300-IC (03)',                         tag:'095-DET003',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'UTIL_GER',           salaId:'UTILIDADES',      nome:'GERADORES',                                                            tag:'GER',              criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'UTIL_SUB',           salaId:'UTILIDADES',      nome:'SUBESTAÇÕES',                                                          tag:'SUB',              criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'UTIL_CALD',          salaId:'UTILIDADES',      nome:'CALDEIRA',                                                             tag:'CALD',             criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'UTIL_ETE',           salaId:'UTILIDADES',      nome:'ESTAÇÃO DE TRATAMENTO DE EFLUENTES',                                   tag:'ETE',              criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LAV_SEC002',         salaId:'LAVANDERIA',      nome:'SECADORA DE ROUPAS MAMUTE SE60',                                       tag:'095-SEC002',       criticidade:2, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LAV_LAV008',         salaId:'LAVANDERIA',      nome:'LAVADORA DE ROUPAS MAMUTE LEH60',                                      tag:'095-LAV008',       criticidade:1, periodicidadeNumero:1, periodicidadeUnidade:'mes', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
     ],
 
     // ── OS Executadas ────────────────────────────────────────
