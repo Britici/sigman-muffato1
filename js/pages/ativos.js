@@ -398,10 +398,10 @@ function _chartCardHtml(db) {
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
-        <button class="btn btn-gh btn-sm" id="btn-estrutura" type="button">🗂️ Estrutura</button>
-        <div class="dd" id="dd-novo">
-          <button class="btn btn-p btn-sm" id="btn-dd-novo" type="button">+ Adicionar ▾</button>
-          <div class="dd-menu">
+        <button class="btn btn-p btn-sm" id="btn-dd-novo" type="button">+ Adicionar ▾</button>
+        <div class="dd-menu">
+          <button class="btn btn-gh btn-sm" id="btn-estrutura" type="button">🗂️ Estrutura</button>
+          <div class="dd" id="dd-novo">
             <button class="dd-item" data-novo="unidade" type="button">🏢 Unidade</button>
             <button class="dd-item" data-novo="local" type="button">📍 Local</button>
             <button class="dd-item" data-novo="ambiente" type="button">🏭 Ambiente</button>
