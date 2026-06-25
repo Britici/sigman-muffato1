@@ -18,7 +18,10 @@ import { showToast, openM, closeM, fd } from '../utils.js';
 // ── Estado do módulo ────────────────────────────────────────
 let _sortAtivos   = { col: 'sala',   dir: 'asc' };
 let _sortInativos = { col: 'sala',   dir: 'asc' };
-let _filtros = { unidadeId: '', localId: '', ambienteId: '', salaId: '' };
+let _filtros = {
+  unidadeId: '', localId: '', ambienteId: '', salaId: '',
+  nome: '', tag: '', crit: '', period: '', criadoEm: '',
+};
 let _editCtx = null; // { tipo, id } — null = criando
 let _globalBound = false; // evita registrar o listener de fechar dropdown mais de 1x
 
@@ -26,6 +29,30 @@ const NOVO = '__novo__';
 
 const CRIT_LABEL = { 1: '1 – Crítico', 2: '2 – Alta', 3: '3 – Média', 4: '4 – Baixa' };
 const UNID_LABEL = { dias: ['dia', 'dias'], semanas: ['semana', 'semanas'], mes: ['mês', 'meses'], ano: ['ano', 'anos'] };
+
+// Cores do gráfico de Criticidade — mesmas cores das badges .crit-1..4
+// da tabela (unificado: criticidade 3 = azul nos dois lugares).
+const CHART_COLORS = ['#ff2244', 'var(--org)', 'var(--blu)', 'var(--grn)'];
+const CHART_GRAY = 'var(--txt3)';
+
+// Larguras mínimas de coluna — evita quebra de linha em valores
+// reais longos (ex: "MUFFATO FOODS", "PATO BRANCO - PR",
+// "095-TER008-DUP2").
+const COL_MINW = {
+  unidade: 170, local: 170, ambiente: 160, sala: 150,
+  nome: 170, tag: 170, period: 130, criadoEm: 130,
+};
+
+// Colunas com filtro de texto livre (substring, sem acento/case).
+// Períodos comparam contra o rótulo já formatado (ex: "30 dias").
+// "Última Preventiva" e "Ativo" ficam de fora de propósito — ver
+// observação enviada ao Tiago.
+const TEXT_FIL_COLS = ['nome', 'tag', 'period', 'criadoEm'];
+
+// Normaliza para comparação: minúsculas + remove acentos.
+function _norm(s) {
+  return (s ?? '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
 
 const COLS = [
   { key: 'unidade',  label: 'Unidade' },
@@ -96,7 +123,9 @@ export function render() {
     </div>`;
 
   _bindDropdownNovo();
+  _bindEstrutura();
   _bindFiltroSelects();
+  _bindColFiltrosTexto();
   _bindSortHeaders();
   _bindHierLinks();
   _bindRowActions(ativas.concat(inativas));
@@ -128,11 +157,16 @@ function _linhas(db) {
 }
 
 function _aplicarFiltros(linhas) {
-  return linhas.filter(({ chain }) => {
+  return linhas.filter(({ m, chain }) => {
     if (_filtros.salaId     && chain.sala?.id     !== _filtros.salaId)     return false;
     if (_filtros.ambienteId && chain.ambiente?.id !== _filtros.ambienteId) return false;
     if (_filtros.localId    && chain.local?.id    !== _filtros.localId)   return false;
     if (_filtros.unidadeId  && chain.unidade?.id  !== _filtros.unidadeId) return false;
+    if (_filtros.nome     && !_norm(m.nome).includes(_norm(_filtros.nome)))    return false;
+    if (_filtros.tag      && !_norm(m.tag).includes(_norm(_filtros.tag)))      return false;
+    if (_filtros.crit     && String(m.criticidade) !== _filtros.crit)         return false;
+    if (_filtros.period   && !_norm(_periodLabel(m.periodicidadeNumero, m.periodicidadeUnidade)).includes(_norm(_filtros.period))) return false;
+    if (_filtros.criadoEm && !_norm(fd(m.criadoEm)).includes(_norm(_filtros.criadoEm))) return false;
     return true;
   });
 }
@@ -163,18 +197,41 @@ function _thHtml(db, c, group) {
   const sort = group === 'ativos' ? _sortAtivos : _sortInativos;
   const active = sort.col === c.key ? sort.dir : '';
   const label = `<span class="th-label sortable ${active}" data-col="${c.key}" data-group="${group}">${c.label}</span>`;
+  const mw = COL_MINW[c.key] ? ` style="min-width:${COL_MINW[c.key]}px"` : '';
 
-  if (!HIER_COLS.includes(c.key)) return `<th>${label}</th>`;
+  // Hierarquia (Unidade/Local/Ambiente/Sala): select cascateado, já existia.
+  if (HIER_COLS.includes(c.key)) {
+    const opts = _filtroOpcoes(db, c.key);
+    const selectHtml = `
+      <select class="col-fil" data-level="${c.key}">
+        <option value="">Todas</option>
+        ${opts.map(o => `<option value="${o.id}" ${_filtros[`${c.key}Id`] === o.id ? 'selected' : ''}>${_esc(o.nome)}</option>`).join('')}
+      </select>`;
+    return `<th class="th-fil"${mw}>${label}${selectHtml}</th>`;
+  }
 
-  // Filtro cascateado: cada select só mostra opções coerentes com o
-  // que já está selecionado nos níveis acima.
-  const opts = _filtroOpcoes(db, c.key);
-  const selectHtml = `
-    <select class="col-fil" data-level="${c.key}">
-      <option value="">Todas</option>
-      ${opts.map(o => `<option value="${o.id}" ${_filtros[`${c.key}Id`] === o.id ? 'selected' : ''}>${_esc(o.nome)}</option>`).join('')}
-    </select>`;
-  return `<th class="th-fil">${label}${selectHtml}</th>`;
+  // Criticidade: select de enum (1–4), não texto livre.
+  if (c.key === 'crit') {
+    const selectHtml = `
+      <select class="col-fil" data-filter-key="crit">
+        <option value="">Todas</option>
+        ${[1, 2, 3, 4].map(n => `<option value="${n}" ${_filtros.crit === String(n) ? 'selected' : ''}>${CRIT_LABEL[n]}</option>`).join('')}
+      </select>`;
+    return `<th class="th-fil">${label}${selectHtml}</th>`;
+  }
+
+  // Colunas de texto livre (Ativo/Máquina, TAG, Periodicidade, Criado em).
+  if (TEXT_FIL_COLS.includes(c.key)) {
+    const inputHtml = `
+      <input type="text" class="col-fil-txt" data-filter-key="${c.key}" value="${_esc(_filtros[c.key])}" placeholder="Filtrar...">`;
+    return `<th class="th-fil"${mw}>${label}${inputHtml}</th>`;
+  }
+
+  // "Ativo" não tem filtro próprio: o card já separa Ativos/Inativos,
+  // então um filtro aqui seria redundante (sempre o mesmo valor por
+  // card). "Última Preventiva" também fica fora, pois hoje sempre
+  // retorna "—" (sem dado de execução de preventiva ainda).
+  return `<th${mw}>${label}</th>`;
 }
 
 function _filtroOpcoes(db, nivel) {
@@ -203,6 +260,13 @@ function _bindFiltroSelects() {
   document.querySelectorAll('#pg-at .col-fil').forEach(sel => {
     sel.addEventListener('click', e => e.stopPropagation());
     sel.addEventListener('change', () => {
+      // Select de coluna "solta" (hoje só Criticidade), identificado
+      // por data-filter-key em vez de data-level.
+      if (sel.dataset.filterKey) {
+        _filtros[sel.dataset.filterKey] = sel.value;
+        render();
+        return;
+      }
       const nivel = sel.dataset.level;
       _filtros[`${nivel}Id`] = sel.value;
       // Zera filtros de níveis abaixo, que deixam de ser coerentes
@@ -210,6 +274,23 @@ function _bindFiltroSelects() {
       if (nivel === 'local')    { _filtros.ambienteId = ''; _filtros.salaId = ''; }
       if (nivel === 'ambiente') { _filtros.salaId = ''; }
       render();
+    });
+  });
+}
+
+// Filtros de texto livre (Ativo/Máquina, TAG, Periodicidade, Criado em).
+// render() reconstrói toda a tabela a cada chamada — sem isso, o
+// campo perderia o foco e o cursor a cada tecla digitada.
+function _bindColFiltrosTexto() {
+  document.querySelectorAll('#pg-at .col-fil-txt').forEach(inp => {
+    inp.addEventListener('click', e => e.stopPropagation());
+    inp.addEventListener('input', () => {
+      const key = inp.dataset.filterKey;
+      const caret = inp.selectionStart;
+      _filtros[key] = inp.value;
+      render();
+      const again = document.querySelector(`#pg-at [data-filter-key="${key}"]`);
+      if (again) { again.focus(); again.setSelectionRange(caret, caret); }
     });
   });
 }
@@ -241,12 +322,12 @@ function _rowHtml({ m, chain }) {
       <td class="td-cap">${hier('ambiente', ambiente)}</td>
       <td class="td-cap">${hier('sala', sala)}</td>
       <td class="td-cap"><span class="hier-link" data-tipo="maquina" data-id="${m.id}">${_esc(m.nome)}</span></td>
-      <td><code>${_esc(m.tag || '—')}</code></td>
+      <td class="td-cap td-tag"><code>${_esc(m.tag || '—')}</code></td>
       <td>${_critBadge(m.criticidade)}</td>
-      <td>${_periodLabel(m.periodicidadeNumero, m.periodicidadeUnidade)}</td>
-      <td style="color:var(--txt3)">${_ultimaPreventiva(m.id)}</td>
+      <td class="td-cap">${_periodLabel(m.periodicidadeNumero, m.periodicidadeUnidade)}</td>
+      <td class="td-cap" style="color:var(--txt3)">${_ultimaPreventiva(m.id)}</td>
       <td><span class="badge ${m.ativo !== false ? 'bg-green' : 'bg-gray'}">${m.ativo !== false ? 'Sim' : 'Não'}</span></td>
-      <td>${fd(m.criadoEm)}</td>
+      <td class="td-cap">${fd(m.criadoEm)}</td>
       <td>
         <button class="btn btn-sm btn-gh" data-acao="editar-maquina" data-id="${m.id}" title="Editar">✏️</button>
         <button class="btn btn-sm btn-gh" data-acao="toggle-maquina" data-id="${m.id}" title="${m.ativo !== false ? 'Inativar' : 'Reativar'}">${m.ativo !== false ? '🚫' : '✅'}</button>
@@ -285,19 +366,41 @@ function _bindRowActions(linhas) {
 }
 
 // ============================================================
-// GRÁFICO DE CRITICIDADE (SVG puro) + BOTÃO "+ NOVO"
+// GRÁFICO DE CRITICIDADE (SVG puro) + BOTÃO "+ ADICIONAR"
 // ============================================================
 function _chartCardHtml(db) {
   const ativas = db.maquinas.filter(m => m.ativo !== false);
   const counts = [1, 2, 3, 4].map(c => ativas.filter(m => m.criticidade === c).length);
-  const labels = [1, 2, 3, 4].map(c => CRIT_LABEL[c]);
+  const total = counts.reduce((a, b) => a + b, 0);
 
   return `
-    <div class="card">
-      <div class="card-t" style="justify-content:space-between">
-        <span style="display:flex;align-items:center;gap:8px"><span style="width:3px;height:14px;background:var(--red);border-radius:2px"></span>Criticidade das Máquinas</span>
+    <div class="two-col" style="align-items:flex-start;margin-bottom:14px">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-t">Criticidade das Máquinas</div>
+        <div class="chart-grid">
+          <div>
+            <div class="sc-lbl">Visão Geral</div>
+            <div class="donut-wrap">
+              ${_svgDonut(counts, total)}
+              <div class="donut-legend">
+                ${counts.map((c, i) => `
+                  <div class="legend-item">
+                    <span class="legend-dot" style="background:${CHART_COLORS[i]}"></span>
+                    <span>${i + 1} ${total ? Math.round((c / total) * 100) : 0}%</span>
+                  </div>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="sc-lbl">Quantidade da Distribuição</div>
+            ${_svgBars(counts, total)}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
+        <button class="btn btn-gh btn-sm" id="btn-estrutura" type="button">🗂️ Estrutura</button>
         <div class="dd" id="dd-novo">
-          <button class="btn btn-p btn-sm" id="btn-dd-novo" type="button">+ Novo ▾</button>
+          <button class="btn btn-p btn-sm" id="btn-dd-novo" type="button">+ Adicionar ▾</button>
           <div class="dd-menu">
             <button class="dd-item" data-novo="unidade" type="button">🏢 Unidade</button>
             <button class="dd-item" data-novo="local" type="button">📍 Local</button>
@@ -307,49 +410,45 @@ function _chartCardHtml(db) {
           </div>
         </div>
       </div>
-      <div class="two-col" style="align-items:center">
-        <div style="display:flex;justify-content:center">${_svgDonut(counts)}</div>
-        <div>${_svgBars(counts, labels)}</div>
-      </div>
     </div>`;
 }
 
-function _svgDonut(counts) {
-  const total = counts.reduce((a, b) => a + b, 0);
-  const r = 52, cx = 64, cy = 64, sw = 22;
+function _svgDonut(counts, total) {
+  const r = 46, cx = 60, cy = 60, sw = 20;
   const circ = 2 * Math.PI * r;
-  const colors = ['#ff2244', 'var(--org)', 'var(--yel)', 'var(--grn)'];
   let acc = 0, segs = '';
   counts.forEach((c, i) => {
     if (!total || !c) return;
     const len = (c / total) * circ;
     const rot = (acc / circ) * 360 - 90;
-    segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[i]}" stroke-width="${sw}" stroke-dasharray="${len} ${circ - len}" transform="rotate(${rot} ${cx} ${cy})"/>`;
+    segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${CHART_COLORS[i]}" stroke-width="${sw}" stroke-dasharray="${len} ${circ - len}" transform="rotate(${rot} ${cx} ${cy})"/>`;
     acc += len;
   });
   return `
-    <svg viewBox="0 0 128 128" width="148" height="148">
+    <svg viewBox="0 0 120 120" width="120" height="120">
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bord)" stroke-width="${sw}"/>
       ${segs}
-      <text x="${cx}" y="${cy - 2}" text-anchor="middle" font-family="var(--fw)" font-size="26" font-weight="800" fill="var(--txt)">${total}</text>
-      <text x="${cx}" y="${cy + 16}" text-anchor="middle" font-family="var(--fw)" font-size="10" font-variant="small-caps" letter-spacing=".05em" fill="var(--txt3)">ativas</text>
+      <text x="${cx}" y="${cy + 7}" text-anchor="middle" font-family="var(--fw)" font-size="24" font-weight="800" fill="var(--txt)">${total}</text>
     </svg>`;
 }
 
-function _svgBars(counts, labels) {
-  const max = Math.max(...counts, 1);
-  const W = 280, leftPad = 78, rightPad = 34, barH = 16, gap = 12;
-  const colors = ['#ff2244', 'var(--org)', 'var(--yel)', 'var(--grn)'];
-  let y = 4, rows = '';
-  counts.forEach((c, i) => {
-    const bw = Math.max((c / max) * (W - leftPad - rightPad), c ? 3 : 0);
-    rows += `
-      <text x="0" y="${y + barH - 4}" font-family="var(--fb)" font-size="11" fill="var(--txt2)">${labels[i]}</text>
-      <rect x="${leftPad}" y="${y}" width="${bw}" height="${barH}" rx="3" fill="${colors[i]}"/>
-      <text x="${leftPad + bw + 6}" y="${y + barH - 4}" font-family="var(--fw)" font-size="11" font-weight="700" fill="var(--txt)">${c}</text>`;
-    y += barH + gap;
+function _svgBars(counts, total) {
+  const labels = ['1', '2', '3', '4', 'Total'];
+  const colors = [...CHART_COLORS, CHART_GRAY];
+  const values = [...counts, total];
+  const max = Math.max(...values, 1);
+  const W = 280, H = 130, barW = 30, gap = 22, baseY = H - 22, top = 18;
+  let x = 6, bars = '';
+  values.forEach((v, i) => {
+    const h = Math.max((v / max) * (baseY - top), v ? 4 : 0);
+    const y = baseY - h;
+    bars += `
+      <text x="${x + barW / 2}" y="${y - 8}" text-anchor="middle" font-family="var(--fw)" font-size="13" font-weight="800" fill="var(--txt)">${v}</text>
+      <rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="4" fill="${colors[i]}"/>
+      <text x="${x + barW / 2}" y="${baseY + 16}" text-anchor="middle" font-family="var(--fw)" font-size="11" font-weight="700" fill="var(--txt3)">${labels[i]}</text>`;
+    x += barW + gap;
   });
-  return `<svg viewBox="0 0 ${W} ${y}" width="100%" height="${y}">${rows}</svg>`;
+  return `<svg viewBox="0 0 ${x} ${H}" width="100%" height="${H}" style="max-width:300px">${bars}</svg>`;
 }
 
 function _bindDropdownNovo() {
@@ -359,6 +458,88 @@ function _bindDropdownNovo() {
   btn.addEventListener('click', e => { e.stopPropagation(); dd.classList.toggle('open'); });
   dd.querySelectorAll('.dd-item').forEach(it => {
     it.addEventListener('click', () => { dd.classList.remove('open'); _openForm(it.dataset.novo, null); });
+  });
+}
+
+// ============================================================
+// MODAL "ESTRUTURA" — árvore Unidade → Local → Ambiente → Sala
+// já cadastrada, com contagem por nó e "+" pra criar filho direto
+// (resolve a limitação de nível recém-criado ficar invisível até
+// existir 1 máquina embaixo dele).
+// ============================================================
+function _bindEstrutura() {
+  document.getElementById('btn-estrutura')?.addEventListener('click', () => {
+    _renderEstrutura();
+    openM('m-estrutura');
+  });
+}
+
+function _renderEstrutura() {
+  const db = getDB();
+  const body = document.getElementById('estrutura-b');
+  if (!body) return;
+
+  const porNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR');
+  const locaisDe    = uId => db.locais.filter(l => l.unidadeId === uId && l.ativo !== false).sort(porNome);
+  const ambientesDe = lId => db.ambientes.filter(a => a.localId === lId && a.ativo !== false).sort(porNome);
+  const salasDe      = aId => db.salas.filter(s => s.ambienteId === aId && s.ativo !== false).sort(porNome);
+  const maqCount     = sId => db.maquinas.filter(m => m.salaId === sId && m.ativo !== false).length;
+  const unidades = [...db.unidades].filter(u => u.ativo !== false).sort(porNome);
+
+  const addBtn = (tipo, parentId, txt) =>
+    `<button class="btn btn-sm btn-gh estr-add" data-add="${tipo}" data-parent="${parentId ?? ''}" type="button">+ ${txt}</button>`;
+
+  const linhaSala = s => `
+    <div class="estr-leaf">🚪 ${_esc(s.nome)} <span class="estr-count">${maqCount(s.id)} máquina(s)</span></div>`;
+
+  const nodeAmbiente = a => `
+    <details class="estr-node" open>
+      <summary><span class="estr-row">
+        <span>🏭 ${_esc(a.nome)} <span class="estr-count">${salasDe(a.id).length} sala(s)</span></span>
+        ${addBtn('sala', a.id, 'Sala')}
+      </span></summary>
+      <div class="estr-children">
+        ${salasDe(a.id).map(linhaSala).join('') || '<div class="estr-empty">Nenhuma sala cadastrada.</div>'}
+      </div>
+    </details>`;
+
+  const nodeLocal = l => `
+    <details class="estr-node" open>
+      <summary><span class="estr-row">
+        <span>📍 ${_esc(l.nome)} <span class="estr-count">${ambientesDe(l.id).length} ambiente(s)</span></span>
+        ${addBtn('ambiente', l.id, 'Ambiente')}
+      </span></summary>
+      <div class="estr-children">
+        ${ambientesDe(l.id).map(nodeAmbiente).join('') || '<div class="estr-empty">Nenhum ambiente cadastrado.</div>'}
+      </div>
+    </details>`;
+
+  const nodeUnidade = u => `
+    <details class="estr-node" open>
+      <summary><span class="estr-row">
+        <span>🏢 ${_esc(u.nome)} <span class="estr-count">${locaisDe(u.id).length} local(is)</span></span>
+        ${addBtn('local', u.id, 'Local')}
+      </span></summary>
+      <div class="estr-children">
+        ${locaisDe(u.id).map(nodeLocal).join('') || '<div class="estr-empty">Nenhum local cadastrado.</div>'}
+      </div>
+    </details>`;
+
+  body.innerHTML = `
+    <div class="fa" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:10px">
+      ${addBtn('unidade', '', 'Unidade')}
+    </div>
+    ${unidades.map(nodeUnidade).join('') || '<div class="estr-empty">Nenhuma Unidade cadastrada ainda.</div>'}`;
+
+  // Botões "+" ficam dentro do <summary> — sem isso, o clique também
+  // alterna o open/close do <details> (comportamento nativo do navegador).
+  body.querySelectorAll('[data-add]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeM('m-estrutura');
+      _openForm(btn.dataset.add, null, btn.dataset.parent || null);
+    });
   });
 }
 
@@ -471,7 +652,7 @@ function _setModalWidth(px) {
   if (modal) modal.style.maxWidth = px ? `${px}px` : '';
 }
 
-function _openForm(tipo, id) {
+function _openForm(tipo, id, preParentId = null) {
   _editCtx = { tipo, id };
   const fns = {
     unidade:  _formUnidade,
@@ -480,7 +661,7 @@ function _openForm(tipo, id) {
     sala:     _formSala,
     maquina:  _formMaquina,
   };
-  (fns[tipo] || (() => {}))(id);
+  (fns[tipo] || (() => {}))(id, preParentId);
 }
 
 function _statusToggleHtml(tipo, node) {
@@ -521,16 +702,17 @@ function _formUnidade(id) {
 }
 
 // ── Local ────────────────────────────────────────────────────
-function _formLocal(id) {
+function _formLocal(id, preParentId) {
   const db = getDB();
   const l = id ? _getL(db, id) : null;
   _setModalWidth(420);
   document.getElementById('me-t').textContent = l ? `Editar Local — ${l.nome}` : 'Novo Local';
 
+  const unidadeIdSel = l ? l.unidadeId : (preParentId || '');
   const unidadesOpt = db.unidades
     .filter(u => u.ativo !== false || u.id === l?.unidadeId)
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-    .map(u => `<option value="${u.id}" ${l?.unidadeId === u.id ? 'selected' : ''}>${_esc(u.nome)}</option>`).join('');
+    .map(u => `<option value="${u.id}" ${unidadeIdSel === u.id ? 'selected' : ''}>${_esc(u.nome)}</option>`).join('');
 
   document.getElementById('me-b').innerHTML = `
     ${!db.unidades.length ? `<div class="alert er on">Cadastre uma Unidade antes.</div>` : ''}
@@ -558,10 +740,10 @@ function _formLocal(id) {
 }
 
 // ── Ambiente ─────────────────────────────────────────────────
-function _formAmbiente(id) {
+function _formAmbiente(id, preParentId) {
   const db = getDB();
   const a = id ? _getA(db, id) : null;
-  const curLocal = a ? _getL(db, a.localId) : null;
+  const curLocal = a ? _getL(db, a.localId) : (preParentId ? _getL(db, preParentId) : null);
   _setModalWidth(420);
   document.getElementById('me-t').textContent = a ? `Editar Ambiente — ${a.nome}` : 'Novo Ambiente';
 
@@ -575,11 +757,12 @@ function _formAmbiente(id) {
     .map(l => `<option value="${l.id}" ${l0 === l.id ? 'selected' : ''}>${_esc(l.nome)}</option>`).join('');
 
   const unidadeIdAtual = curLocal?.unidadeId || db.unidades[0]?.id || '';
+  const localIdAtual = a ? a.localId : (preParentId || curLocal?.id || '');
 
   document.getElementById('me-b').innerHTML = `
     ${!db.unidades.length ? `<div class="alert er on">Cadastre uma Unidade antes.</div>` : ''}
     <div class="fg"><label>Unidade</label><select id="f-unidade">${unidadesOpt(unidadeIdAtual)}</select></div>
-    <div class="fg"><label>Local</label><select id="f-pai">${locaisOpt(unidadeIdAtual, a?.localId)}</select></div>
+    <div class="fg"><label>Local</label><select id="f-pai">${locaisOpt(unidadeIdAtual, localIdAtual)}</select></div>
     <div class="fg"><label>Nome do Ambiente</label>
       <input type="text" id="f-nome" value="${a ? _escAttr(a.nome) : ''}" placeholder="Ex: Produção">
     </div>
@@ -607,10 +790,10 @@ function _formAmbiente(id) {
 }
 
 // ── Sala (+ aprovadores) ─────────────────────────────────────
-function _formSala(id) {
+function _formSala(id, preParentId) {
   const db = getDB();
   const s = id ? _getS(db, id) : null;
-  const curAmb   = s ? _getA(db, s.ambienteId) : null;
+  const curAmb   = s ? _getA(db, s.ambienteId) : (preParentId ? _getA(db, preParentId) : null);
   const curLocal = curAmb ? _getL(db, curAmb.localId) : null;
   _setModalWidth(460);
   document.getElementById('me-t').textContent = s ? `Editar Sala — ${s.nome}` : 'Nova Sala';
@@ -630,6 +813,7 @@ function _formSala(id) {
 
   const unidadeIdAtual = curLocal?.unidadeId || db.unidades[0]?.id || '';
   const localIdAtual   = curAmb?.localId     || '';
+  const ambienteIdSel  = s ? s.ambienteId : (preParentId || '');
 
   const aprovAtuais = new Set((db.aprovadoresLocal || []).filter(x => x.salaId === id).map(x => x.usuarioId));
   const usuariosOpt = db.usuarios
@@ -644,7 +828,7 @@ function _formSala(id) {
     ${!db.unidades.length ? `<div class="alert er on">Cadastre uma Unidade antes.</div>` : ''}
     <div class="fg"><label>Unidade</label><select id="f-unidade">${unidadesOpt(unidadeIdAtual)}</select></div>
     <div class="fg"><label>Local</label><select id="f-local">${locaisOpt(unidadeIdAtual, localIdAtual)}</select></div>
-    <div class="fg"><label>Ambiente</label><select id="f-pai">${ambientesOpt(localIdAtual, s?.ambienteId)}</select></div>
+    <div class="fg"><label>Ambiente</label><select id="f-pai">${ambientesOpt(localIdAtual, ambienteIdSel)}</select></div>
     <div class="fg"><label>Nome da Sala</label>
       <input type="text" id="f-nome" value="${s ? _escAttr(s.nome) : ''}" placeholder="Ex: Carne Moída">
     </div>
