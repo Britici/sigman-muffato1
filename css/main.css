@@ -198,9 +198,10 @@ th.sortable.desc::after{content:' ▼';opacity:1;color:var(--red-l)}
 .th-label.sortable::after{content:' ⇅';opacity:.35;font-size:10px}
 .th-label.sortable.asc::after{content:' ▲';opacity:1;color:var(--red-l)}
 .th-label.sortable.desc::after{content:' ▼';opacity:1;color:var(--red-l)}
-th.th-fil select{display:block;margin-top:4px;width:100%;max-width:140px;font-size:11px;font-family:var(--fb);background:var(--inp);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);padding:3px 5px;outline:none}
+th.th-fil select,th.th-fil input.col-fil-txt{display:block;margin-top:4px;width:100%;font-size:11px;font-family:var(--fb);background:var(--inp);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);padding:3px 5px;outline:none}
 .hier-link{cursor:pointer;border-bottom:1px dashed var(--bord2);transition:color .15s}
 .hier-link:hover{color:var(--red-l)}
+.td-tag{white-space:nowrap}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:100px;font-family:var(--fw);font-size:11px;font-weight:700;font-variant:small-caps;letter-spacing:.03em;white-space:nowrap}
@@ -225,13 +226,14 @@ th.th-fil select{display:block;margin-top:4px;width:100%;max-width:140px;font-si
 .pdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
 .d-1{background:#ff2244}.d-2{background:#ff5570}.d-3{background:var(--org)}.d-4{background:var(--grn)}
 
-/* CRITICIDADE DE ATIVOS — gradiente fixo vermelho(1)->laranja(2)->amarelo(3)->verde(4).
+/* CRITICIDADE DE ATIVOS — gradiente fixo vermelho(1)->laranja(2)->azul(3)->verde(4).
+   Unificado com as cores do gráfico de Criticidade em _chartCardHtml (CHART_COLORS).
    Classes dedicadas, não reaproveitam .b-c1..4 (cores diferentes, usadas em prioridade de OS). */
 .crit-1{background:rgba(196,18,48,.18);color:#ff2244;border:1px solid rgba(196,18,48,.4)}
 .crit-2{background:rgba(245,158,11,.16);color:var(--org);border:1px solid rgba(245,158,11,.35)}
-.crit-3{background:rgba(232,201,58,.16);color:var(--yel);border:1px solid rgba(232,201,58,.35)}
+.crit-3{background:rgba(64,150,255,.16);color:var(--blu);border:1px solid rgba(64,150,255,.35)}
 .crit-4{background:rgba(31,217,136,.16);color:var(--grn);border:1px solid rgba(31,217,136,.35)}
-.crit-dot-1{background:#ff2244}.crit-dot-2{background:var(--org)}.crit-dot-3{background:var(--yel)}.crit-dot-4{background:var(--grn)}
+.crit-dot-1{background:#ff2244}.crit-dot-2{background:var(--org)}.crit-dot-3{background:var(--blu)}.crit-dot-4{background:var(--grn)}
 
 /* DROPDOWN (ex.: botão "+ Novo" de Ativos, com opções por nível) */
 .dd{position:relative;display:inline-block}
@@ -258,6 +260,23 @@ th.th-fil select{display:block;margin-top:4px;width:100%;max-width:140px;font-si
 .tri-col{display:grid;grid-template-columns:1fr;gap:14px}
 @media(min-width:640px){.tri-col{grid-template-columns:1fr 1fr}}
 @media(min-width:1024px){.tri-col{grid-template-columns:1fr 1fr 1fr}}
+
+/* GRÁFICO DE CRITICIDADE (card de Ativos) */
+.chart-grid{display:flex;gap:28px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-legend{display:flex;flex-direction:column;gap:7px}
+.legend-item{display:flex;align-items:center;gap:7px;font-family:var(--fb);font-size:12px;font-weight:600;color:var(--txt2)}
+.legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
+
+/* MODAL ESTRUTURA — árvore Unidade > Local > Ambiente > Sala */
+.estr-node{margin-bottom:4px}
+.estr-node summary{cursor:pointer;padding:8px 10px;border-radius:var(--rs);background:var(--surf2);transition:background .15s}
+.estr-node summary:hover{background:var(--surf3)}
+.estr-row{display:inline-flex;align-items:center;justify-content:space-between;gap:10px;width:calc(100% - 16px);font-family:var(--fw);font-weight:700;font-variant:small-caps;letter-spacing:.03em;color:var(--txt);vertical-align:middle}
+.estr-children{padding:6px 0 2px 20px;margin:4px 0 4px 9px;border-left:1px dashed var(--bord2)}
+.estr-leaf{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13px;color:var(--txt2);font-variant:small-caps;font-family:var(--fw);font-weight:600}
+.estr-count{font-size:11px;color:var(--txt3);font-weight:600;font-variant:normal;letter-spacing:0;text-transform:none}
+.estr-empty{padding:6px 10px;font-size:12px;color:var(--txt3)}
 
 /* ALERT */
 .alert{border-radius:var(--rs);padding:10px 14px;font-size:13px;margin-bottom:12px;font-weight:500;display:none}
