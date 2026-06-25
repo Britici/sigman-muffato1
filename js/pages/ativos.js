@@ -35,13 +35,10 @@ const UNID_LABEL = { dias: ['dia', 'dias'], semanas: ['semana', 'semanas'], mes:
 const CHART_COLORS = ['#ff2244', 'var(--org)', 'var(--blu)', 'var(--grn)'];
 const CHART_GRAY = 'var(--txt3)';
 
-// Larguras mínimas de coluna — evita quebra de linha em valores
-// reais longos (ex: "MUFFATO FOODS", "PATO BRANCO - PR",
-// "095-TER008-DUP2").
-const COL_MINW = {
-  unidade: 170, local: 170, ambiente: 160, sala: 150,
-  nome: 170, tag: 170, period: 130, criadoEm: 130,
-};
+// Colunas que devem se auto-ajustar ao conteúdo (uma linha só, sem
+// sobra de espaço). "nome" (Ativo/Máquina) fica de fora de propósito:
+// é a única que pode quebrar em 2-3 linhas em vez de cortar o texto.
+const NOWRAP_COLS = ['unidade', 'local', 'ambiente', 'sala', 'tag', 'crit', 'period', 'ultPrev', 'ativo', 'criadoEm'];
 
 // Colunas com filtro de texto livre (substring, sem acento/case).
 // Períodos comparam contra o rótulo já formatado (ex: "30 dias").
@@ -197,7 +194,7 @@ function _thHtml(db, c, group) {
   const sort = group === 'ativos' ? _sortAtivos : _sortInativos;
   const active = sort.col === c.key ? sort.dir : '';
   const label = `<span class="th-label sortable ${active}" data-col="${c.key}" data-group="${group}">${c.label}</span>`;
-  const mw = COL_MINW[c.key] ? ` style="min-width:${COL_MINW[c.key]}px"` : '';
+  const nw = NOWRAP_COLS.includes(c.key) ? ' th-fit' : '';
 
   // Hierarquia (Unidade/Local/Ambiente/Sala): select cascateado, já existia.
   if (HIER_COLS.includes(c.key)) {
@@ -207,7 +204,7 @@ function _thHtml(db, c, group) {
         <option value="">Todas</option>
         ${opts.map(o => `<option value="${o.id}" ${_filtros[`${c.key}Id`] === o.id ? 'selected' : ''}>${_esc(o.nome)}</option>`).join('')}
       </select>`;
-    return `<th class="th-fil"${mw}>${label}${selectHtml}</th>`;
+    return `<th class="th-fil${nw}">${label}${selectHtml}</th>`;
   }
 
   // Criticidade: select de enum (1–4), não texto livre.
@@ -217,21 +214,21 @@ function _thHtml(db, c, group) {
         <option value="">Todas</option>
         ${[1, 2, 3, 4].map(n => `<option value="${n}" ${_filtros.crit === String(n) ? 'selected' : ''}>${CRIT_LABEL[n]}</option>`).join('')}
       </select>`;
-    return `<th class="th-fil">${label}${selectHtml}</th>`;
+    return `<th class="th-fil${nw}">${label}${selectHtml}</th>`;
   }
 
   // Colunas de texto livre (Ativo/Máquina, TAG, Periodicidade, Criado em).
   if (TEXT_FIL_COLS.includes(c.key)) {
     const inputHtml = `
       <input type="text" class="col-fil-txt" data-filter-key="${c.key}" value="${_esc(_filtros[c.key])}" placeholder="Filtrar...">`;
-    return `<th class="th-fil"${mw}>${label}${inputHtml}</th>`;
+    return `<th class="th-fil${nw}">${label}${inputHtml}</th>`;
   }
 
   // "Ativo" não tem filtro próprio: o card já separa Ativos/Inativos,
   // então um filtro aqui seria redundante (sempre o mesmo valor por
   // card). "Última Preventiva" também fica fora, pois hoje sempre
   // retorna "—" (sem dado de execução de preventiva ainda).
-  return `<th${mw}>${label}</th>`;
+  return `<th${nw ? ` class="${nw.trim()}"` : ''}>${label}</th>`;
 }
 
 function _filtroOpcoes(db, nivel) {
@@ -317,17 +314,17 @@ function _rowHtml({ m, chain }) {
 
   return `
     <tr>
-      <td class="td-cap">${hier('unidade', unidade)}</td>
-      <td class="td-cap">${hier('local', local)}</td>
-      <td class="td-cap">${hier('ambiente', ambiente)}</td>
-      <td class="td-cap">${hier('sala', sala)}</td>
+      <td class="td-cap td-fit">${hier('unidade', unidade)}</td>
+      <td class="td-cap td-fit">${hier('local', local)}</td>
+      <td class="td-cap td-fit">${hier('ambiente', ambiente)}</td>
+      <td class="td-cap td-fit">${hier('sala', sala)}</td>
       <td class="td-cap"><span class="hier-link" data-tipo="maquina" data-id="${m.id}">${_esc(m.nome)}</span></td>
-      <td class="td-cap td-tag"><code>${_esc(m.tag || '—')}</code></td>
-      <td>${_critBadge(m.criticidade)}</td>
-      <td class="td-cap">${_periodLabel(m.periodicidadeNumero, m.periodicidadeUnidade)}</td>
-      <td class="td-cap" style="color:var(--txt3)">${_ultimaPreventiva(m.id)}</td>
-      <td><span class="badge ${m.ativo !== false ? 'bg-green' : 'bg-gray'}">${m.ativo !== false ? 'Sim' : 'Não'}</span></td>
-      <td class="td-cap">${fd(m.criadoEm)}</td>
+      <td class="td-cap td-fit"><code>${_esc(m.tag || '—')}</code></td>
+      <td class="td-fit">${_critBadge(m.criticidade)}</td>
+      <td class="td-cap td-fit">${_periodLabel(m.periodicidadeNumero, m.periodicidadeUnidade)}</td>
+      <td class="td-cap td-fit" style="color:var(--txt3)">${_ultimaPreventiva(m.id)}</td>
+      <td class="td-fit"><span class="badge ${m.ativo !== false ? 'bg-green' : 'bg-gray'}">${m.ativo !== false ? 'Sim' : 'Não'}</span></td>
+      <td class="td-cap td-fit">${fd(m.criadoEm)}</td>
       <td>
         <button class="btn btn-sm btn-gh" data-acao="editar-maquina" data-id="${m.id}" title="Editar">✏️</button>
         <button class="btn btn-sm btn-gh" data-acao="toggle-maquina" data-id="${m.id}" title="${m.ativo !== false ? 'Inativar' : 'Reativar'}">${m.ativo !== false ? '🚫' : '✅'}</button>
@@ -374,7 +371,7 @@ function _chartCardHtml(db) {
   const total = counts.reduce((a, b) => a + b, 0);
 
   return `
-    <div class="two-col" style="align-items:flex-start;margin-bottom:14px">
+    <div class="chart-row">
       <div class="card" style="margin-bottom:0">
         <div class="card-t">Criticidade das Máquinas</div>
         <div class="chart-grid">
@@ -397,7 +394,7 @@ function _chartCardHtml(db) {
           </div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
+      <div class="chart-row-actions">
         <button class="btn btn-gh btn-sm" id="btn-estrutura" type="button">🗂️ Estrutura</button>
         <div class="dd" id="dd-novo">
           <button class="btn btn-p btn-sm" id="btn-dd-novo" type="button">+ Adicionar ▾</button>
