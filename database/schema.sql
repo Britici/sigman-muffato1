@@ -36,9 +36,8 @@ CREATE TYPE os_tipo AS ENUM (
 );
 
 CREATE TYPE os_origem AS ENUM (
-    'direta',   -- abertura direta
-    'sol',      -- gerada de solicitação
-    'plan'      -- gerada de planejada
+    'direta',   -- abertura direta (qualquer perfil)
+    'plan'      -- gerada de planejada (PCM)
 );
 
 CREATE TYPE os_status AS ENUM (
@@ -59,13 +58,6 @@ CREATE TYPE planejada_status AS ENUM (
     'Em andamento',
     'Concluída',
     'Atrasada',
-    'Cancelada'
-);
-
-CREATE TYPE solicitacao_status AS ENUM (
-    'Não Executada',
-    'Em Andamento',
-    'Concluída',
     'Cancelada'
 );
 
@@ -203,20 +195,32 @@ CREATE TABLE salas (
 CREATE INDEX idx_salas_ambiente ON salas(ambiente_id);
 
 -- ============================================================
--- 3b. APROVADORES_LOCAL
--- Quem pode aprovar OS por Sala (N:N). Cadastrado no próprio
--- formulário de Sala em ativos.js — não espera a fase de
--- Aprovação de OS.
+-- 3b. HIERARQUIA ORGANIZACIONAL E ESCOPO DE APROVAÇÃO (2026-06-27)
+-- Substitui aprovadores_local (checkbox manual por Sala) — aprovação
+-- e pré-preenchimento de Abertura agora vêm do cargo da pessoa.
+-- Dois "lados" (produção / manutenção), 4 níveis cada:
+--   1 Diretoria | 2 Gerência (prod) / Coordenador (manut)
+--   3 Coordenação (prod) / Supervisor (manut) | 4 Produção / Manutenção
+-- Nível 1 = escopo universal (não usa usuario_escopo). Nível 2 = escopo
+-- em Local. Níveis 3 e 4 = escopo em Ambiente. Uma pessoa pode ter
+-- vários nós de escopo (ex: coordenador cobrindo 2 ambientes).
 -- ============================================================
 
-CREATE TABLE aprovadores_local (
-    sala_id     UUID        NOT NULL REFERENCES salas(id) ON DELETE CASCADE,
-    usuario_id  UUID        NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    criado_em   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (sala_id, usuario_id)
+CREATE TYPE lado_tipo AS ENUM ('producao', 'manutencao', 'ambos');
+
+ALTER TABLE usuarios
+    ADD COLUMN lado  lado_tipo,
+    ADD COLUMN nivel SMALLINT CHECK (nivel BETWEEN 1 AND 4);
+
+CREATE TABLE usuario_escopo (
+    usuario_id  UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    local_id    UUID REFERENCES locais(id)    ON DELETE CASCADE,
+    ambiente_id UUID REFERENCES ambientes(id) ON DELETE CASCADE,
+    CHECK (num_nonnulls(local_id, ambiente_id) = 1),
+    UNIQUE (usuario_id, local_id, ambiente_id)
 );
 
-CREATE INDEX idx_aprov_local_usuario ON aprovadores_local(usuario_id);
+CREATE INDEX idx_usuario_escopo_usuario ON usuario_escopo(usuario_id);
 
 -- ============================================================
 -- 4. FAMILIAS DE EQUIPAMENTO
@@ -378,39 +382,6 @@ CREATE TABLE os_planejadas (
 
 CREATE INDEX idx_planejadas_status    ON os_planejadas(status);
 CREATE INDEX idx_planejadas_prazo     ON os_planejadas(prazo_limite);
-
--- ============================================================
--- 9. SOLICITACOES
--- Solicitações abertas por produção/outros perfis
--- ============================================================
-
-CREATE TABLE solicitacoes (
-    id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    sol_numero          VARCHAR(20) NOT NULL UNIQUE,   -- ex: SOL-0004
-    sala_id             UUID        NOT NULL REFERENCES salas(id),
-    maquina_id          UUID         REFERENCES maquinas(id),
-    maquina_livre       VARCHAR(200),
-    tipo                os_tipo     NOT NULL,
-    prioridade          SMALLINT    NOT NULL DEFAULT 3
-                        CHECK (prioridade BETWEEN 1 AND 4),
-    descricao           TEXT        NOT NULL,
-    status              solicitacao_status NOT NULL DEFAULT 'Não Executada',
-    -- Pessoas
-    solicitante_id      UUID        REFERENCES usuarios(id),
-    solicitante_nome    VARCHAR(120),
-    manutentor_exec_id  UUID        REFERENCES usuarios(id),
-    manutentor_exec_nome VARCHAR(120),
-    -- Execução
-    data_execucao       DATE,
-    servico_executado   TEXT,
-    os_gerada_id        UUID        REFERENCES ordens_servico(id),  -- OS criada a partir desta
-    -- Metadados
-    criado_em           TIMESTAMPTZ NOT NULL DEFAULT now(),
-    concluido_em        TIMESTAMPTZ,
-    atualizado_em       TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_sol_status ON solicitacoes(status);
 
 -- ============================================================
 -- 10. PREVENTIVA_TEMPLATES
@@ -680,10 +651,6 @@ CREATE TRIGGER trg_os_updated
 
 CREATE TRIGGER trg_planejadas_updated
     BEFORE UPDATE ON os_planejadas
-    FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
-
-CREATE TRIGGER trg_solicitacoes_updated
-    BEFORE UPDATE ON solicitacoes
     FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
 
 CREATE TRIGGER trg_racr_updated
