@@ -487,7 +487,7 @@ function _renderEstrutura() {
     `<button class="btn btn-sm btn-gh estr-add" data-add="${tipo}" data-parent="${parentId ?? ''}" type="button">+ ${txt}</button>`;
 
   const linhaSala = s => `
-    <div class="estr-leaf">🚪 ${_esc(s.nome)} <span class="estr-count">${maqCount(s.id)} máquina(s)</span></div>`;
+    <div class="estr-leaf estr-leaf-click" data-sala="${s.id}">🚪 ${_esc(s.nome)} <span class="estr-count">${maqCount(s.id)} máquina(s)</span></div>`;
 
   const nodeAmbiente = a => `
     <details class="estr-node" open>
@@ -536,6 +536,16 @@ function _renderEstrutura() {
       e.stopPropagation();
       closeM('m-estrutura');
       _openForm(btn.dataset.add, null, btn.dataset.parent || null);
+    });
+  });
+
+  // Clique na Sala abre o form de edição (aprovadores, etc.) — antes só
+  // existia esse caminho clicando numa Máquina já cadastrada na sala
+  // (hier-link), o que deixava as salas com 0 máquinas inacessíveis.
+  body.querySelectorAll('[data-sala]').forEach(leaf => {
+    leaf.addEventListener('click', () => {
+      closeM('m-estrutura');
+      _openForm('sala', leaf.dataset.sala);
     });
   });
 }
@@ -812,15 +822,6 @@ function _formSala(id, preParentId) {
   const localIdAtual   = curAmb?.localId     || '';
   const ambienteIdSel  = s ? s.ambienteId : (preParentId || '');
 
-  const aprovAtuais = new Set((db.aprovadoresLocal || []).filter(x => x.salaId === id).map(x => x.usuarioId));
-  const usuariosOpt = db.usuarios
-    .filter(u => u.ativo !== false)
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-    .map(u => `
-      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;font-weight:400">
-        <input type="checkbox" class="f-aprov" value="${u.login}" ${aprovAtuais.has(u.login) ? 'checked' : ''}> ${_esc(u.nome)}
-      </label>`).join('');
-
   document.getElementById('me-b').innerHTML = `
     ${!db.unidades.length ? `<div class="alert er on">Cadastre uma Unidade antes.</div>` : ''}
     <div class="fg"><label>Unidade</label><select id="f-unidade">${unidadesOpt(unidadeIdAtual)}</select></div>
@@ -829,11 +830,9 @@ function _formSala(id, preParentId) {
     <div class="fg"><label>Nome da Sala</label>
       <input type="text" id="f-nome" value="${s ? _escAttr(s.nome) : ''}" placeholder="Ex: Carne Moída">
     </div>
-    <div class="fg">
-      <label>Aprovadores de OS desta Sala</label>
-      <div style="max-height:160px;overflow-y:auto;border:1px solid var(--bord);border-radius:var(--rs);padding:4px 10px;background:var(--inp)">
-        ${usuariosOpt || '<span style="font-size:12px;color:var(--txt3)">Nenhum usuário ativo.</span>'}
-      </div>
+    <div style="font-size:12px;color:var(--txt3);padding:4px 2px">
+      Quem aprova OS desta Sala é definido pelo nível/escopo do usuário,
+      em 🧑‍💼 Usuários — não mais aqui.
     </div>
     ${_statusToggleHtml('sala', s)}`;
 
@@ -859,12 +858,6 @@ function _formSala(id, preParentId) {
       salaId = _genId('SAL', nome);
       db.salas.push({ id: salaId, ambienteId, nome: _normNome(nome), ativo: true, criadoEm: new Date().toISOString() });
     }
-
-    // Aprovadores: substitui o conjunto desta sala pelo selecionado agora
-    db.aprovadoresLocal = (db.aprovadoresLocal || []).filter(x => x.salaId !== salaId);
-    document.querySelectorAll('#me-b .f-aprov:checked').forEach(chk => {
-      db.aprovadoresLocal.push({ salaId, usuarioId: chk.value });
-    });
 
     saveDB(); closeM('m-edit'); showToast(s ? 'Sala atualizada.' : 'Sala criada.', 'ok'); render();
   };

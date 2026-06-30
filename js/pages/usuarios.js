@@ -18,6 +18,19 @@ const COLS = [
   { key: 'perfil', label: 'Perfil' },
 ];
 
+const LADO_LABEL  = { producao: 'Produção', manutencao: 'Manutenção', ambos: 'Ambos' };
+// Rótulo de nível depende do lado — mesmo número, cargo diferente.
+const NIVEL_LABEL = {
+  producao:   { 1: 'Diretoria', 2: 'Gerência',    3: 'Coordenação', 4: 'Produção'   },
+  manutencao: { 1: 'Diretoria', 2: 'Coordenador', 3: 'Supervisor',  4: 'Manutenção' },
+  ambos:      { 1: 'Diretoria', 2: 'Diretoria',   3: 'Diretoria',   4: 'Diretoria'  },
+};
+function _nivelLabel(u) {
+  if (!u.nivel) return '—';
+  const lado = u.lado || 'ambos';
+  return `${u.nivel} · ${NIVEL_LABEL[lado]?.[u.nivel] || ''}`;
+}
+
 export function init() {
   render();
 }
@@ -61,6 +74,7 @@ export function render() {
         <table>
           <thead><tr>
             ${COLS.map(c => _thHtml(c, 'ativos')).join('')}
+            <th>Nível / Escopo</th>
             <th style="min-width:170px">Ações</th>
           </tr></thead>
           <tbody>${ativos.map(_rowUsuario).join('')}</tbody>
@@ -73,6 +87,7 @@ export function render() {
         <table>
           <thead><tr>
             ${COLS.map(c => _thHtml(c, 'inativos')).join('')}
+            <th>Nível / Escopo</th>
             <th style="min-width:170px">Ações</th>
           </tr></thead>
           <tbody>${inativos.map(_rowUsuario).join('')}</tbody>
@@ -131,6 +146,8 @@ function _compareUsuarios(a, b, col) {
 function _rowUsuario(u) {
   const isSelf = CU?.login === u.login;
   const roleLabel = ROLES[u.perfil]?.label || u.perfil;
+  const escopoTxt = !u.nivel ? '' : u.nivel === 1 ? 'Universal'
+    : `${(u.escopoIds || []).length} ${u.nivel === 2 ? 'Local(is)' : 'Ambiente(s)'}`;
 
   return `
     <tr>
@@ -138,6 +155,7 @@ function _rowUsuario(u) {
       <td class="td-cap">${_esc(u.cargo || '—')}</td>
       <td class="td-cap"><code>${_esc(u.login)}</code></td>
       <td class="td-cap">${_esc(roleLabel)}</td>
+      <td style="font-size:12px">${_nivelLabel(u)}${escopoTxt ? `<br><span style="color:var(--txt3)">${escopoTxt}</span>` : ''}</td>
       <td>
         <button class="btn btn-sm btn-gh" id="btn-edit-${u.login}" title="Editar">✏️ Editar</button>
         <button class="btn btn-sm btn-gh" id="btn-reset-${u.login}" title="Resetar senha para o login">🔑 Resetar</button>
@@ -163,6 +181,11 @@ function _openForm(login) {
     .map(([key, r]) => `<option value="${key}" ${u?.perfil === key ? 'selected' : ''}>${r.label}</option>`)
     .join('');
 
+  const lado  = u?.lado  || '';
+  const nivel = u?.nivel || '';
+  const ladoOptions = Object.entries(LADO_LABEL)
+    .map(([key, label]) => `<option value="${key}" ${lado === key ? 'selected' : ''}>${label}</option>`).join('');
+
   if (mb) {
     mb.innerHTML = `
       <div class="fg">
@@ -185,7 +208,20 @@ function _openForm(login) {
       <div class="alert inf show" style="display:block;margin-top:10px;font-size:12px">
         ℹ️ A senha provisória será igual ao login. O usuário deve trocá-la
         no primeiro acesso, ou o administrador pode resetá-la depois.
-      </div>` : ''}`;
+      </div>` : ''}
+      <div class="fg-row" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bord)">
+        <div class="fg"><label>Hierarquia — Lado</label><select id="me-lado"><option value="">— Sem hierarquia —</option>${ladoOptions}</select></div>
+        <div class="fg"><label>Nível</label><select id="me-nivel"></select></div>
+      </div>
+      <div class="fg" id="me-escopo-wrap" style="margin-top:10px">
+        <label id="me-escopo-label">Escopo</label>
+        <select id="me-escopo" multiple style="min-height:90px"></select>
+        <div style="font-size:11px;color:var(--txt3);margin-top:4px">Ctrl/Cmd+clique pra selecionar mais de um.</div>
+      </div>
+      <div style="font-size:12px;color:var(--txt3);padding:4px 2px;margin-top:6px">
+        Define o que fica pré-preenchido na Abertura de O.S. e quem pode
+        aprovar OS — não é mais por checkbox em cada Sala (Ativos).
+      </div>`;
 
     // Auto-gera login a partir do nome (só na criação)
     if (!u) {
@@ -194,10 +230,57 @@ function _openForm(login) {
         document.getElementById('me-login').value = slug;
       });
     }
+
+    document.getElementById('me-lado').addEventListener('change', () => _atualizarNivelEscopo(u));
+    document.getElementById('me-nivel').addEventListener('change', () => _populateEscopo(u));
+    _atualizarNivelEscopo(u);
   }
 
   document.getElementById('btn-edit-save').onclick = _saveForm;
   openM('m-edit');
+}
+
+// Nível disponível depende do lado. 'ambos' (diretoria) só existe no
+// nível 1 — trava ali. Repopula nível e, em seguida, o escopo.
+function _atualizarNivelEscopo(u) {
+  const ladoSel  = document.getElementById('me-lado');
+  const nivelSel = document.getElementById('me-nivel');
+  const lado = ladoSel.value;
+  if (!lado) {
+    nivelSel.innerHTML = '<option value="">—</option>';
+    nivelSel.disabled = true;
+    _populateEscopo(u);
+    return;
+  }
+  nivelSel.disabled = false;
+  const niveisDisponiveis = lado === 'ambos' ? [1] : [1, 2, 3, 4];
+  nivelSel.innerHTML = niveisDisponiveis
+    .map(n => `<option value="${n}">${n} · ${NIVEL_LABEL[lado][n]}</option>`).join('');
+  const nivelAtual = u?.lado === lado ? u?.nivel : null;
+  if (nivelAtual && niveisDisponiveis.includes(nivelAtual)) nivelSel.value = nivelAtual;
+  _populateEscopo(u);
+}
+
+// Escopo: nível 1 = universal (sem seleção); nível 2 = Locais; níveis
+// 3/4 = Ambientes.
+function _populateEscopo(u) {
+  const db = getDB();
+  const wrap  = document.getElementById('me-escopo-wrap');
+  const label = document.getElementById('me-escopo-label');
+  const sel   = document.getElementById('me-escopo');
+  const nivel = parseInt(document.getElementById('me-nivel').value) || null;
+  if (!nivel || nivel === 1) { wrap.style.display = 'none'; sel.innerHTML = ''; return; }
+  wrap.style.display = '';
+  const cur = u?.nivel === nivel ? (u?.escopoIds || []) : [];
+  if (nivel === 2) {
+    label.textContent = 'Escopo — Local(is)';
+    sel.innerHTML = db.locais.filter(l => l.ativo !== false)
+      .map(l => `<option value="${l.id}" ${cur.includes(l.id) ? 'selected' : ''}>${l.nome}</option>`).join('');
+  } else {
+    label.textContent = 'Escopo — Ambiente(s)';
+    sel.innerHTML = db.ambientes.filter(a => a.ativo !== false)
+      .map(a => `<option value="${a.id}" ${cur.includes(a.id) ? 'selected' : ''}>${a.nome}</option>`).join('');
+  }
 }
 
 async function _saveForm() {
@@ -205,6 +288,11 @@ async function _saveForm() {
   const cargo  = document.getElementById('me-cargo')?.value?.trim() || '';
   const login  = document.getElementById('me-login')?.value?.trim().toLowerCase();
   const perfil = document.getElementById('me-perfil')?.value;
+  const lado   = document.getElementById('me-lado')?.value || '';
+  const nivel  = parseInt(document.getElementById('me-nivel')?.value) || null;
+  const escopoIds = lado && nivel && nivel !== 1
+    ? [...document.getElementById('me-escopo').selectedOptions].map(o => o.value)
+    : [];
 
   if (!nome || !login || !perfil) {
     showToast('Preencha todos os campos.', 'er');
@@ -212,6 +300,10 @@ async function _saveForm() {
   }
   if (!ROLES[perfil]) {
     showToast('Perfil inválido.', 'er');
+    return;
+  }
+  if (lado && !nivel) {
+    showToast('Selecione o nível da hierarquia.', 'er');
     return;
   }
 
@@ -235,6 +327,7 @@ async function _saveForm() {
     u.nome   = nome;
     u.cargo  = cargo;
     u.perfil = perfil;
+    u.lado = lado || null; u.nivel = nivel; u.escopoIds = escopoIds;
   } else {
     // ── Criação ──
     if (db.usuarios.some(x => x.login === login)) {
@@ -242,7 +335,7 @@ async function _saveForm() {
       return;
     }
     const senhaHash = await hashPassword(login); // senha provisória = login
-    db.usuarios.push({ login, nome, cargo, perfil, senhaHash, ativo: true, primeiroAcesso: true });
+    db.usuarios.push({ login, nome, cargo, perfil, senhaHash, ativo: true, primeiroAcesso: true, lado: lado || null, nivel, escopoIds });
   }
 
   saveDB();

@@ -4,7 +4,8 @@
 
 import { getDB, saveDB, apiPost } from '../api.js';
 import { CU, updOSHoje } from '../auth.js';
-import { v, sv, fd, today, prio, tipoBadge, openM, closeM, showToast, debounce } from '../utils.js';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -29,14 +30,15 @@ function _populateFiltros() {
   const slSel = document.getElementById('fe-sl');
   if (slSel) {
     const cur = slSel.value;
+    const nomes = [...new Set((db.salas||[]).map(s=>s.nome))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     slSel.innerHTML = '<option value="">Todas as Salas</option>';
-    [...db.salas].sort().forEach(s => slSel.innerHTML += `<option value="${s}">${s}</option>`);
+    nomes.forEach(s => slSel.innerHTML += `<option value="${s}">${s}</option>`);
     if (cur) slSel.value = cur;
   }
   const mnSel = document.getElementById('fe-mn');
   if (mnSel) {
     const cur = mnSel.value;
-    const manuts = [...new Set(db.ordens.map(o=>o.manut).filter(Boolean))].sort();
+    const manuts = [...new Set(db.ordens.map(o=>o.manut).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     mnSel.innerHTML = '<option value="">Todos os Manut.</option>';
     manuts.forEach(m => mnSel.innerHTML += `<option value="${m}">${m}</option>`);
     if (cur) mnSel.value = cur;
@@ -46,7 +48,7 @@ function _populateFiltros() {
 function _bindFiltros() {
   const renderD = debounce(render, 280);
   document.getElementById('fe-tx')?.addEventListener('input', renderD);
-  ['fe-tp','fe-sl','fe-mn','fe-dt-ini','fe-dt-fim'].forEach(id =>
+  ['fe-tp','fe-st','fe-sl','fe-mn','fe-dt-ini','fe-dt-fim'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', render));
 }
 
@@ -64,11 +66,12 @@ function _bindSortHeaders() {
 export function render() {
   const db = getDB();
   _populateFiltros();
-  const tx=v('fe-tx').toLowerCase(), tp=v('fe-tp'), sl=v('fe-sl'),
+  const tx=v('fe-tx').toLowerCase(), tp=v('fe-tp'), st=v('fe-st'), sl=v('fe-sl'),
         mn=v('fe-mn'), dtI=v('fe-dt-ini'), dtF=v('fe-dt-fim');
   let data = [...db.ordens];
   if (tx)  data = data.filter(o=>[o.numero,o.sala,o.maq,o.manut,o.tipo,o.prob].some(x=>x&&x.toLowerCase().includes(tx)));
   if (tp)  data = data.filter(o=>o.tipo===tp);
+  if (st)  data = data.filter(o=>_status(o)===st);
   if (sl)  data = data.filter(o=>o.sala===sl);
   if (mn)  data = data.filter(o=>o.manut===mn);
   if (dtI) data = data.filter(o=>o.data>=dtI);
@@ -86,8 +89,13 @@ export function render() {
   });
   const tb = document.getElementById('tb-exec');
   if (!tb) return;
-  if (!data.length) { tb.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="ei">📋</div><p>Nenhuma ordem encontrada.</p></div></td></tr>`; return; }
-  tb.innerHTML = data.map(o=>`<tr>
+  if (!data.length) { tb.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="ei">📋</div><p>Nenhuma ordem encontrada.</p></div></td></tr>`; return; }
+  tb.innerHTML = data.map(o=>{
+    const status = _status(o);
+    const acoes = status==='aberta'
+      ? `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`
+      : `<button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>`;
+    return `<tr>
     <td style="white-space:nowrap">
       <div style="display:flex;align-items:center;gap:4px">
         ${_precisaRAC(o)?`<span class="rac-dot" title="RAC obrigatório"></span>`:''}
@@ -99,18 +107,29 @@ export function render() {
     <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${o.maq}">${o.maq}</td>
     <td>${tipoBadge(o.tipo)}</td>
     <td>${prio(o.prioridade)}</td>
+    <td>${stBadge(_statusLabel(status))}</td>
     <td style="font-size:12px">${o.manut||'—'}</td>
     <td style="font-family:var(--fm);font-size:11px;white-space:nowrap">
       ${o.ini&&o.fim?`${o.ini}–${o.fim}`:'—'}
       ${o.durMin?`<br><span style="color:var(--txt3)">${o.durMin}min</span>`:''}
     </td>
     <td><div style="display:flex;gap:4px">
-      <button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>
+      ${acoes}
       <button class="btn btn-d" onclick="window._delOS('${o.numero}')">✕</button>
     </div></td>
-  </tr>`).join('');
-  window._verDet = verDet;
-  window._delOS  = delOS;
+  </tr>`;
+  }).join('');
+  window._verDet  = verDet;
+  window._delOS   = delOS;
+  window._atender = numero => abrirConcluir(numero, 'os');
+}
+
+// Status efetivo de uma OS. Registros antigos (legado, criados antes
+// do conceito de status existir) não têm o campo — tratamos como
+// concluída, igual sempre foram na prática.
+function _status(o) { return o.status || 'concluida'; }
+function _statusLabel(status) {
+  return { aberta:'Aberta', aguardando_aprovacao:'Aguardando Aprovação', concluida:'Concluída' }[status] || 'Concluída';
 }
 
 export function verDet(numero) {
@@ -120,10 +139,12 @@ export function verDet(numero) {
   document.getElementById('md-n').textContent = o.numero;
   document.getElementById('md-t').textContent = `${o.sala} · ${o.maq}`;
   document.getElementById('md-b').innerHTML = `
+    <div class="dr"><span class="dl">Status</span><span class="dv">${stBadge(_statusLabel(_status(o)))}</span></div>
     <div class="dr"><span class="dl">Sala</span><span class="dv">${o.sala}</span></div>
     <div class="dr"><span class="dl">Máquina</span><span class="dv">${o.maq}</span></div>
     <div class="dr"><span class="dl">Tipo</span><span class="dv">${tipoBadge(o.tipo)}</span></div>
     <div class="dr"><span class="dl">Prioridade</span><span class="dv">${prio(o.prioridade)}</span></div>
+    ${o.solicitante?`<div class="dr"><span class="dl">Solicitante</span><span class="dv">${o.solicitante}</span></div>`:''}
     <div class="dr"><span class="dl">Manutentor</span><span class="dv">${o.manut||'—'}</span></div>
     <div class="dr"><span class="dl">Data</span><span class="dv">${fd(o.data)}</span></div>
     <div class="dr"><span class="dl">Horário</span><span class="dv">${o.ini||'—'} – ${o.fim||'—'}${o.durMin?` (${o.durMin}min)`:''}</span></div>
@@ -132,14 +153,67 @@ export function verDet(numero) {
     <div class="dr"><span class="dl">Ação Executada</span><span class="dv">${o.acao||'—'}</span></div>
     ${o.acaoPrev?`<div class="dr"><span class="dl">Ação Preventiva</span><span class="dv">${o.acaoPrev}</span></div>`:''}
     ${o.fotoUrl?`<div class="dr" style="flex-direction:column;gap:8px"><span class="dl">📷 Foto</span><a href="${o.fotoUrl}" target="_blank"><img src="${o.fotoUrl}" style="max-width:100%;max-height:220px;border-radius:var(--rs);object-fit:contain;border:1px solid var(--bord)" alt="Foto OS"></a></div>`:''}
-    ${o.origem&&o.origem!=='direta'?`<div class="dr"><span class="dl">Origem</span><span class="dv" style="color:var(--red)">${o.origemNum||o.origem}</span></div>`:''}`;
+    ${o.origem&&o.origem!=='direta'?`<div class="dr"><span class="dl">Origem</span><span class="dv" style="color:var(--red)">${o.origemNum||o.origem}</span></div>`:''}
+    ${_blocoAprovacao(o)}`;
   const wa=`*${o.numero} — Ordem de Serviço*\n\n*Sala:* ${o.sala}\n*Máquina:* ${o.maq}\n*Problema:* ${o.prob||'—'}\n*Tipo:* ${o.tipo}\n*Prioridade:* ${o.prioridade}\n*Tempo:* ${o.ini||'?'} – ${o.fim||'?'} (${o.durMin||'?'}min)\n*Parada:* ${o.paradaMin||'?'}min\n\n${o.acao||''}\n\n_Manutentor: ${o.manut}_`;
   const waEl=document.getElementById('md-wa'), waBtn=document.getElementById('md-wa-btn');
   if(waEl){waEl.textContent=wa;waEl.style.display='block';}
   if(waBtn) waBtn.style.display='inline-block';
   document.getElementById('md-print-btn').style.display='inline-block';
   document.getElementById('md-rac-btn').style.display=_precisaRAC(o)?'inline-block':'none';
+  window._aprovarProd  = _aprovarProd;
+  window._aprovarManut = _aprovarManut;
   openM('m-det');
+}
+
+function _blocoAprovacao(o) {
+  const status = _status(o);
+  if (status === 'aberta' || status === 'concluida') return '';
+  const prodPendente  = !!o.aprovadorProdLogin && !o.aprovadoProdEm;
+  const manutPendente = !o.aprovadoManutEm;
+  const podeProd  = prodPendente  && elegiveisProd(o).includes(CU?.login);
+  const podeManut = manutPendente && elegiveisManut(o).includes(CU?.login);
+  return `
+    <div class="dr" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bord);flex-direction:column;gap:8px;align-items:stretch">
+      <div class="dr"><span class="dl">Aprovação Produção</span><span class="dv">${
+        !o.aprovadorProdLogin ? 'Não se aplica' : (o.aprovadoProdEm ? `✅ ${o.aprovadorProd}` : `⏳ Pendente (${o.aprovadorProd})`)
+      }</span></div>
+      <div class="dr"><span class="dl">Aprovação Manutenção</span><span class="dv">${
+        o.aprovadoManutEm ? `✅ ${o.aprovadorManut}` : '⏳ Pendente'
+      }</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${podeProd  ? `<button class="btn btn-sm btn-g" onclick="window._aprovarProd('${o.numero}')">✓ Aprovar Produção</button>`  : ''}
+        ${podeManut ? `<button class="btn btn-sm btn-g" onclick="window._aprovarManut('${o.numero}')">✓ Aprovar Manutenção</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function _tentarConcluir(o) {
+  const prodOK  = !o.aprovadorProdLogin || !!o.aprovadoProdEm;
+  const manutOK = !!o.aprovadoManutEm;
+  if (prodOK && manutOK) { o.status = 'concluida'; o.concluidoEm = new Date().toISOString(); }
+}
+
+function _aprovarProd(numero) {
+  const db=getDB(), o=db.ordens.find(x=>x.numero===numero);
+  if (!o || !elegiveisProd(o).includes(CU?.login)) return;
+  o.aprovadorProd = CU.nome; o.aprovadorProdLogin = CU.login; // registra quem de fato aprovou
+  o.aprovadoProdEm = new Date().toISOString();
+  _tentarConcluir(o);
+  saveDB(); _logEdit('Aprovou (Produção)', o.numero, `${o.sala} · ${o.maq}`);
+  showToast(`${o.numero} — produção aprovou.`,'ok');
+  verDet(numero); render(); updOSHoje();
+}
+
+function _aprovarManut(numero) {
+  const db=getDB(), o=db.ordens.find(x=>x.numero===numero);
+  if (!o || !elegiveisManut(o).includes(CU?.login)) return;
+  o.aprovadorManut = CU.nome; o.aprovadorManutLogin = CU.login;
+  o.aprovadoManutEm = new Date().toISOString();
+  _tentarConcluir(o);
+  saveDB(); _logEdit('Aprovou (Manutenção)', o.numero, `${o.sala} · ${o.maq}`);
+  showToast(`${o.numero} — manutenção aprovou.${o.status==='concluida'?' OS concluída.':''}`,'ok');
+  verDet(numero); render(); updOSHoje();
 }
 
 export function delOS(numero) {
@@ -156,43 +230,84 @@ export function delOS(numero) {
 export function abrirConcluir(id, tipo) {
   const db=getDB();
   _concluirId=id; _concluirTipo=tipo;
-  const item=tipo==='plan'?db.planejadas.find(x=>x.numero===id):db.solicitacoes.find(x=>x.numero===id);
+  const item = tipo==='plan' ? db.planejadas.find(x=>x.numero===id)
+             : tipo==='os'   ? db.ordens.find(x=>x.numero===id)
+             : null;
   if(!item){showToast('Item não encontrado.','er');return;}
+  const desc = tipo==='os' ? item.prob : item.descricao;
+  document.getElementById('mc-tit').textContent = tipo==='os' ? 'Atender Ordem de Serviço' : 'Concluir O.S. Planejada';
   document.getElementById('mc-inf').innerHTML=`
     <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:12px">
       <div class="osdisp">${item.numero}</div>
       <div style="font-weight:600;margin:4px 0">${item.sala} · ${item.maq}</div>
       <div style="font-size:12px;color:var(--txt3)">${item.tipo} · ${item.prioridade||''}</div>
-      ${item.desc?`<div style="font-size:12px;color:var(--txt2);margin-top:8px;padding-top:8px;border-top:1px solid var(--bord)">${item.desc}</div>`:''}
+      ${desc?`<div style="font-size:12px;color:var(--txt2);margin-top:8px;padding-top:8px;border-top:1px solid var(--bord)">${desc}</div>`:''}
     </div>`;
-  sv('mc-dt',today()); sv('mc-mn',CU?.nome||'');
+  sv('mc-dt',today()); _populateManutentoresModal(); sv('mc-mn',CU?.login||'');
   ['mc-in','mc-fm','mc-ds','mc-parada'].forEach(id=>sv(id,''));
   openM('m-con');
 }
 
+// Manutentor = usuário real (login), não mais texto livre.
+function _populateManutentoresModal() {
+  const db = getDB(), sel = document.getElementById('mc-mn');
+  if (!sel) return;
+  const users = (db.usuarios||[])
+    .filter(u => ['manutencao','pcm','admin'].includes(u.perfil) && u.ativo!==false)
+    .sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  sel.innerHTML = '<option value="">Selecione...</option>' +
+    users.map(u=>`<option value="${u.login}">${u.nome}</option>`).join('');
+}
+
 async function _concluir() {
   const db=getDB();
-  const manut=v('mc-mn').trim(), desc=v('mc-ds').trim(),
+  const manutLogin=v('mc-mn'), desc=v('mc-ds').trim(),
         data=v('mc-dt'), ini=v('mc-in'), fim=v('mc-fm'),
         parada=parseInt(v('mc-parada'))||0;
-  if(!manut||!desc){showToast('Preencha manutentor e serviço executado.','er');return;}
-  const item=_concluirTipo==='plan'?db.planejadas.find(x=>x.numero===_concluirId):db.solicitacoes.find(x=>x.numero===_concluirId);
-  if(!item){showToast('Item não encontrado.','er');return;}
+  if(!manutLogin||!desc){showToast('Selecione o manutentor e preencha o serviço executado.','er');return;}
+  const manutUser=db.usuarios.find(u=>u.login===manutLogin);
+  const manut=manutUser?.nome||manutLogin;
   const agora=new Date().toISOString();
   let durMin=0, paradaMin=parada;
   if(ini&&fim){const[h1,m1]=ini.split(':').map(Number),[h2,m2]=fim.split(':').map(Number);durMin=Math.max(0,(h2*60+m2)-(h1*60+m1));if(!paradaMin)paradaMin=durMin;}
+
+  if (_concluirTipo === 'os') {
+    // Atender uma OS aberta por produção: atualiza o mesmo registro,
+    // não cria uma nova OS. aprovadorProdLogin já foi definido na
+    // abertura (quem relatou o problema) — mantém.
+    const o = db.ordens.find(x=>x.numero===_concluirId);
+    if(!o){showToast('OS não encontrada.','er');return;}
+    Object.assign(o,{manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,status:'aguardando_aprovacao'});
+    saveDB(); closeM('m-con');
+    _logEdit('Atendeu OS',o.numero,`${o.sala} · ${o.maq}`);
+    render(); updOSHoje();
+    showToast(`${o.numero} atendida — aguardando aprovação.`,'ok');
+    apiPost({action:'update',sheet:'ordens',id:o.numero,idCol:'OS_Numero',row:{Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Acao_Executada:desc}});
+    return;
+  }
+
+  // tipo 'plan' — concluir planejada, gera uma OS nova
+  const item=db.planejadas.find(x=>x.numero===_concluirId);
+  if(!item){showToast('Item não encontrado.','er');return;}
   const numero=_genOS();
-  const os={id:crypto.randomUUID(),numero,sala:item.sala,maq:item.maq,tipo:item.tipo,prioridade:item.prioridade,manut,data:data||today(),ini,fim,durMin,paradaMin,prob:item.desc||'',acao:desc,criadoEm:agora,origem:_concluirTipo,origemNum:item.numero};
+  const os={
+    id:crypto.randomUUID(),numero,sala:item.sala,maq:item.maq,tipo:item.tipo,prioridade:item.prioridade,
+    manut,manutLogin,data:data||today(),ini,fim,durMin,paradaMin,prob:item.descricao||'',acao:desc,
+    criadoEm:agora,origem:_concluirTipo,origemNum:item.numero,
+    status:'aguardando_aprovacao',
+    // Planejada não tem solicitante de produção → aprovação de
+    // produção não se aplica (mesma regra de quem abre por conta própria).
+    solicitante:'',solicitanteLogin:'',aprovadorProd:'',aprovadorProdLogin:'',
+    aprovadoProdEm:'',aprovadoManutEm:'',aprovadorManut:'',aprovadorManutLogin:'',
+  };
   Object.assign(item,{status:'Concluída',concluidoEm:agora,manut,ini,fim,dtExec:data,desc2:desc,durMin});
   db.ordens.push(os); db.osC++;
   saveDB(); closeM('m-con');
   _logEdit('Concluiu',item.numero,`${item.sala} · ${item.maq}`);
   render(); updOSHoje();
   showToast(`${item.numero} concluída → ${numero} registrada.`,'ok');
-  const sheet=_concluirTipo==='plan'?'planejadas':'solicitacoes';
-  const idCol=_concluirTipo==='plan'?'PL_Numero':'SOL_Numero';
-  apiPost({action:'update',sheet,id:item.numero,idCol,row:{Status:'Concluída',Manutentor_Exec:manut,Data_Execucao:data,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Servico_Executado:desc,Concluido_Em:agora}});
-  apiPost({action:'append',sheet:'ordens',row:{OS_Numero:numero,Data:data||today(),Sala:item.sala,Maquina:item.maq,Tipo:item.tipo,Prioridade:item.prioridade,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Problema:item.desc||'',Acao_Executada:desc,Origem:_concluirTipo,OS_Origem_Ref:item.numero,Criado_Em:agora}});
+  apiPost({action:'update',sheet:'planejadas',id:item.numero,idCol:'PL_Numero',row:{Status:'Concluída',Manutentor_Exec:manut,Data_Execucao:data,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Servico_Executado:desc,Concluido_Em:agora}});
+  apiPost({action:'append',sheet:'ordens',row:{OS_Numero:numero,Data:data||today(),Sala:item.sala,Maquina:item.maq,Tipo:item.tipo,Prioridade:item.prioridade,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Problema:item.descricao||'',Acao_Executada:desc,Origem:_concluirTipo,OS_Origem_Ref:item.numero,Criado_Em:agora}});
 }
 
 export function abrirRAC(os) {
