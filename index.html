@@ -136,6 +136,7 @@
         <div class="fr">
           <input type="text" id="fe-tx" placeholder="🔍 Buscar...">
           <select id="fe-tp"><option value="">Todos os Tipos</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select>
+          <select id="fe-st"><option value="">Todos os Status</option><option value="aberta">Aberta</option><option value="aguardando_aprovacao">Aguardando Aprovação</option><option value="concluida">Concluída</option></select>
           <select id="fe-sl"><option value="">Todas as Salas</option></select>
           <select id="fe-mn"><option value="">Todos os Manut.</option></select>
           <input type="date" id="fe-dt-ini" title="Data inicial">
@@ -150,6 +151,7 @@
               <th class="sortable" data-col="maq">Máquina</th>
               <th class="sortable" data-col="tipo">Tipo</th>
               <th class="sortable" data-col="prioridade">Prioridade</th>
+              <th>Status</th>
               <th class="sortable" data-col="manut">Manutentor</th>
               <th>Tempo</th>
               <th style="min-width:160px">Ações</th>
@@ -170,10 +172,10 @@
             <div class="fg"><label>Máquina / Ativo</label><select id="ab-mq"><option value="">Selecione a sala</option></select></div>
             <div class="fg"><label>Tipo de Ação</label><select id="ab-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
             <div class="fg"><label>Prioridade</label><select id="ab-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
-            <div class="fg"><label>Manutentor Responsável</label><input type="text" id="ab-mn" placeholder="Nome"></div>
+            <div class="fg" id="ab-mn-wrap"><label>Manutentor Responsável</label><select id="ab-mn"><option value="">Selecione...</option></select></div>
           </div>
         </div>
-        <div class="card">
+        <div class="card" id="card-ab-tempo">
           <div class="card-t">Tempo de Intervenção</div>
           <div class="fg-row fg-3">
             <div class="fg"><label>Data</label><input type="date" id="ab-dt"></div>
@@ -185,16 +187,18 @@
         <div class="card">
           <div class="card-t">Descrição</div>
           <div class="fg"><label>Problema / Ocorrência</label><textarea id="ab-pb" placeholder="Descreva o problema..."></textarea></div>
-          <div class="fg" style="margin-top:10px"><label>Ação / Serviço Executado</label><textarea id="ab-ac" placeholder="Descreva o serviço..."></textarea></div>
-          <div class="fg" style="margin-top:10px">
-            <label>Ação Preventiva Identificada</label>
-            <textarea id="ab-ap" placeholder="Ação para evitar recorrência..." style="min-height:60px"></textarea>
-          </div>
-          <div class="fg" style="margin-top:10px">
-            <label>Foto da OS (opcional)</label>
-            <div class="photo-zone" id="ab-photo-zone">
-              <input type="file" id="ab-photo-input" accept="image/*" style="display:none">
-              <div id="ab-photo-preview"><span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto</span></div>
+          <div id="ab-bloco-execucao">
+            <div class="fg" style="margin-top:10px"><label>Ação / Serviço Executado</label><textarea id="ab-ac" placeholder="Descreva o serviço..."></textarea></div>
+            <div class="fg" style="margin-top:10px">
+              <label>Ação Preventiva Identificada</label>
+              <textarea id="ab-ap" placeholder="Ação para evitar recorrência..." style="min-height:60px"></textarea>
+            </div>
+            <div class="fg" style="margin-top:10px">
+              <label>Foto da OS (opcional)</label>
+              <div class="photo-zone" id="ab-photo-zone">
+                <input type="file" id="ab-photo-input" accept="image/*" style="display:none">
+                <div id="ab-photo-preview"><span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -249,36 +253,6 @@
         </div>
       </div>
 
-      <!-- ══ SOLICITAÇÃO ══ -->
-      <div class="pg" id="pg-solicitacao">
-        <div class="ph"><div class="pt"><small>Produção</small>Solicitação de O.S.</div></div>
-        <div class="alert" id="al-sol"></div>
-        <div class="card">
-          <div class="card-t">Nova Solicitação</div>
-          <div class="fg-row">
-            <div class="fg"><label>Sala / Local</label><select id="sol-sl"><option value="">Selecione...</option></select></div>
-            <div class="fg"><label>Máquina / Ativo</label><select id="sol-mq"><option value="">Selecione a sala</option></select></div>
-            <div class="fg"><label>Tipo</label><select id="sol-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Melhoria</option></select></div>
-            <div class="fg"><label>Prioridade</label><select id="sol-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
-            <div class="fg fg-full"><label>Descrição do Problema</label><textarea id="sol-ds" placeholder="Descreva o problema..."></textarea></div>
-          </div>
-          <div class="fa">
-            <button class="btn btn-gh" id="btn-sol-clear">Limpar</button>
-            <button class="btn btn-p" id="btn-sol-save">Enviar Solicitação</button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-t" style="justify-content:space-between">
-            <span style="display:flex;align-items:center;gap:8px"><span style="width:3px;height:14px;background:var(--red);border-radius:2px"></span>Solicitações Registradas</span>
-            <select id="sol-sort" style="font-family:var(--fw);font-size:11px;font-weight:700;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt2);padding:3px 8px;cursor:pointer">
-              <option value="numero-desc">Mais recente</option>
-              <option value="prioridade-asc">Prioridade</option>
-              <option value="status-asc">Status</option>
-            </select>
-          </div>
-          <div id="sol-lista"></div>
-        </div>
-      </div>
 
       <!-- ══ INSPEÇÃO DIÁRIA ══ -->
       <div class="pg" id="pg-inspecao">
@@ -430,10 +404,10 @@
 <!-- ══ MODAL: CONCLUIR OS ══ -->
 <div class="mb" id="m-con">
   <div class="modal">
-    <div class="mhd"><div class="mtit">Concluir Ordem de Serviço</div><button class="mcl" data-close="m-con">×</button></div>
+    <div class="mhd"><div class="mtit" id="mc-tit">Concluir Ordem de Serviço</div><button class="mcl" data-close="m-con">×</button></div>
     <div id="mc-inf"></div>
     <div class="fg-row" style="margin-top:14px">
-      <div class="fg"><label>Manutentor</label><input type="text" id="mc-mn" placeholder="Nome"></div>
+      <div class="fg"><label>Manutentor</label><select id="mc-mn"><option value="">Selecione...</option></select></div>
       <div class="fg"><label>Data</label><input type="date" id="mc-dt"></div>
       <div class="fg"><label>Hora Início</label><input type="time" id="mc-in"></div>
       <div class="fg"><label>Hora Fim</label><input type="time" id="mc-fm"></div>
