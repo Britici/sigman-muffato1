@@ -19,7 +19,6 @@ const NAV = [
       { id:'inspecao-tmpl',      ic:'📄', lbl:'Inspeção de Rota'       },
       { id:'preventiva',         ic:'🔩', lbl:'Manutenção Preventiva'  },
   ]},
-  { id:'solicitacao',     ic:'📣', lbl:'Solicitação de O.S.', dot:true },
   { id:'ativos',          ic:'🏭', lbl:'Ativos'                  },
   { id:'usuarios',        ic:'👥', lbl:'Usuários'                },
 ];
@@ -92,15 +91,6 @@ export function updateNavDots() {
     if (atrasadas > 0 || urgentes > 0) dotPl.className = 'nv-dot nd-red';
     else if (abertas > 0)              dotPl.className = 'nv-dot nd-org';
     else                               dotPl.className = 'nv-dot nd-grn';
-  }
-
-  const dotSol = document.getElementById('dot-solicitacao');
-  if (dotSol) {
-    const urg  = db.solicitacoes.filter(s => s.prioridade === '1' && s.status === 'Não Executada').length;
-    const pend = db.solicitacoes.filter(s => s.status === 'Não Executada').length;
-    if (urg > 0)        dotSol.className = 'nv-dot nd-red';
-    else if (pend > 0)  dotSol.className = 'nv-dot nd-org';
-    else                dotSol.className = 'nv-dot nd-grn';
   }
 }
 

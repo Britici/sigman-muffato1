@@ -35,7 +35,7 @@ export function tipoBadge(t) {
 }
 
 export function stBadge(s) {
-  const c = { Pendente:'b-pen',Concluída:'b-con',Atrasada:'b-atr',Executada:'b-con','Não Executada':'b-nexe','Em andamento':'b-pen' };
+  const c = { Pendente:'b-pen',Concluída:'b-con',Atrasada:'b-atr',Executada:'b-con','Não Executada':'b-nexe','Em andamento':'b-pen',Aberta:'b-pen','Aguardando Aprovação':'b-atr' };
   return `<span class="badge ${c[s]||''}">${s}</span>`;
 }
 

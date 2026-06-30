@@ -34,16 +34,13 @@ export function saveDB() {
       ambientes:       _db.ambientes,
       salas:           _db.salas,
       maquinas:        _db.maquinas,
-      aprovadoresLocal:_db.aprovadoresLocal,
       ordens:          _db.ordens,
       planejadas:      _db.planejadas,
-      solicitacoes:    _db.solicitacoes,
       inspecoes:       _db.inspecoes,
       racs:            _db.racs,
       historico:       _db.historico,
       osC:  _db.osC,
       plC:  _db.plC,
-      solC: _db.solC,
       racC: _db.racC,
     }));
   } catch (e) { console.warn('[saveDB]', e); }
@@ -83,13 +80,6 @@ export function _genPL() {
   const db = getDB();
   const num = 'PL-' + String(db.plC).padStart(4, '0');
   db.plC++;
-  return num;
-}
-
-export function _genSOL() {
-  const db = getDB();
-  const num = 'SOL-' + String(db.solC).padStart(4, '0');
-  db.solC++;
   return num;
 }
 
@@ -135,7 +125,6 @@ function _mergeRemote(data) {
 
   if (data.ordens?.length)       _db.ordens       = data.ordens.map(_mapOS);
   if (data.planejadas?.length)   _db.planejadas   = data.planejadas.map(_mapPL);
-  if (data.solicitacoes?.length) _db.solicitacoes = data.solicitacoes.map(_mapSOL);
   if (data.inspecoes?.length)    _db.inspecoes    = data.inspecoes;
   if (data.racs?.length)         _db.racs         = data.racs.map(_mapRAC);
   if (data.salas?.length)        _db.salas        = data.salas.map(_mapSala);
@@ -145,7 +134,6 @@ function _mergeRemote(data) {
   // Atualiza contadores com base nos dados remotos
   _db.osC  = _nextCounter(_db.ordens,       'numero', 'OS-');
   _db.plC  = _nextCounter(_db.planejadas,   'numero', 'PL-');
-  _db.solC = _nextCounter(_db.solicitacoes, 'numero', 'SOL-');
   _db.racC = _nextCounter(_db.racs,         'numero', 'RAC-');
 }
 
@@ -203,24 +191,6 @@ function _mapPL(r) {
     inicio:     r.Hora_Inicio        || '',
     fim:        r.Hora_Fim           || '',
     duracao:    Number(r.Duracao_Min || 0),
-    servicoExec:r.Servico_Executado  || '',
-    criadoEm:   r.Criado_Em          || '',
-    concluidoEm:r.Concluido_Em       || '',
-  };
-}
-
-function _mapSOL(r) {
-  return {
-    numero:     r.SOL_Numero         || '',
-    sala:       r.Sala               || '',
-    maq:        r.Maquina            || '',
-    tipo:       r.Tipo               || '',
-    prioridade: String(r.Prioridade  || ''),
-    descricao:  r.Descricao          || '',
-    status:     r.Status             || 'Não Executada',
-    solicitante:r.Solicitante        || '',
-    manutExec:  r.Manutentor_Exec    || '',
-    dataExec:   r.Data_Execucao      || '',
     servicoExec:r.Servico_Executado  || '',
     criadoEm:   r.Criado_Em          || '',
     concluidoEm:r.Concluido_Em       || '',
@@ -371,46 +341,6 @@ export function gasUpdatePL(pl) {
       Duracao_Min:       pl.duracao      || 0,
       Servico_Executado: pl.servicoExec  || '',
       Concluido_Em:      pl.concluidoEm  || '',
-    },
-  });
-}
-
-// Append de Solicitação
-export function gasAppendSOL(sol) {
-  return apiPost({
-    action: 'append',
-    sheet:  'solicitacoes',
-    row: {
-      SOL_Numero:        sol.numero,
-      Sala:              sol.sala,
-      Maquina:           sol.maq,
-      Tipo:              sol.tipo,
-      Prioridade:        sol.prioridade,
-      Descricao:         sol.descricao   || '',
-      Status:            sol.status      || 'Não Executada',
-      Solicitante:       sol.solicitante || '',
-      Manutentor_Exec:   sol.manutExec   || '',
-      Data_Execucao:     sol.dataExec    || '',
-      Servico_Executado: sol.servicoExec || '',
-      Criado_Em:         sol.criadoEm    || new Date().toISOString(),
-      Concluido_Em:      sol.concluidoEm || '',
-    },
-  });
-}
-
-// Update de Solicitação (ex: ao concluir)
-export function gasUpdateSOL(sol) {
-  return apiPost({
-    action: 'update',
-    sheet:  'solicitacoes',
-    idCol:  'SOL_Numero',
-    id:     sol.numero,
-    row: {
-      Status:            sol.status,
-      Manutentor_Exec:   sol.manutExec   || '',
-      Data_Execucao:     sol.dataExec    || '',
-      Servico_Executado: sol.servicoExec || '',
-      Concluido_Em:      sol.concluidoEm || '',
     },
   });
 }

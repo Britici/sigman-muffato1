@@ -16,17 +16,17 @@ export let CU = null; // usuário logado
 export const ROLES = {
   admin: {
     label: 'Administrador',
-    menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','solicitacao','ativos','usuarios'],
+    menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','ativos','usuarios'],
     pcmSub: ['os-planejamento','analise-causa-raiz','inspecao-tmpl','preventiva'],
   },
   pcm: {
     label: 'PCM',
-    menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','solicitacao','ativos'],
+    menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','ativos'],
     pcmSub: ['os-planejamento','analise-causa-raiz','inspecao-tmpl','preventiva'],
   },
   manutencao: {
     label: 'Manutenção',
-    menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','solicitacao'],
+    menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao'],
     pcmSub: [],
   },
   administrativo: {
@@ -36,7 +36,7 @@ export const ROLES = {
   },
   producao: {
     label: 'Produção',
-    menus: ['os-abertura','os-executadas','solicitacao'],
+    menus: ['os-abertura','os-executadas'],
     pcmSub: [],
   },
 };
@@ -218,9 +218,12 @@ async function enterApp() {
   const tbStat = document.getElementById('tb-stat');
   if (tbStat) tbStat.style.display = CU.perfil !== 'producao' ? 'flex' : 'none';
 
-  // Pré-preenche nome do manutentor nos formulários
+  // Pré-preenche nome do manutentor nos formulários que ainda são
+  // texto livre. ab-mn/mc-mn deixaram de ser texto livre (agora são
+  // <select> de usuário real) — cada página cuida do próprio pré-fill
+  // (por login, não por nome) depois de popular as opções.
   if (CU.perfil !== 'producao') {
-    ['ab-mn','insp-mn','insp-tmpl-mn','prev-mn','mc-mn'].forEach(id => sv(id, CU.nome));
+    ['insp-mn','insp-tmpl-mn','prev-mn'].forEach(id => sv(id, CU.nome));
   }
 
   buildNav();
