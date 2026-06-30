@@ -4,8 +4,16 @@
 // Última sincronização: 2026-06-18
 // Próxima OS:  OS-0178  (osC: 178)
 // Próxima PL:  PL-0003  (plC: 3)
-// Próxima SOL: SOL-0004  (solC: 4)
 // Próxima RAC: RAC-0001  (racC: 1)
+//
+// REESTRUTURAÇÃO DE OS (2026-06-27):
+//   Coleção "solicitacoes" removida — abertura de OS agora é unificada
+//   (todo perfil abre direto em ordens, sem etapa de "solicitação"
+//   separada). Campos novos em ordens[]: status ('aberta'|
+//   'aguardando_aprovacao'|'concluida' — ausência = legado/concluída),
+//   solicitante/solicitanteLogin, manutLogin, aprovadorProd/
+//   aprovadorProdLogin, aprovadorManut/aprovadorManutLogin,
+//   aprovadoProdEm, aprovadoManutEm. Ver os-abertura.js/os-executadas.js.
 //
 // MIGRAÇÃO DE PERFIS (2026-06-18):
 //   administracao → pcm            (Leonardo, Larissa, Marcia, Amauri, Welington)
@@ -42,7 +50,6 @@ export function getMockDB() {
     // ── Contadores ───────────────────────────────────────────
     osC:  178,
     plC:  3,
-    solC: 4,
     racC: 1,
 
     // ── Configurações ────────────────────────────────────────
@@ -61,30 +68,46 @@ export function getMockDB() {
     // Senha provisória = login do próprio usuário (ex.: 'tiago' → 'tiago').
     // Cada usuário deve alterar a senha no primeiro acesso; o admin
     // pode redefinir a qualquer momento na tela de Usuários.
+    //
+    // lado/nivel/escopoIds (2026-06-27): substitui aprovadoresLocal.
+    //   lado: 'producao' | 'manutencao' | 'ambos' (nível 1 sempre 'ambos'
+    //   — diretoria fica acima das duas hierarquias).
+    //   nivel: 1 Diretoria | 2 Gerência(prod)/Coordenador(manut) |
+    //   3 Coordenação(prod)/Supervisor(manut) | 4 Produção/Manutenção.
+    //   escopoIds: ids de Local (nível 2) ou Ambiente (níveis 3/4) —
+    //   nível 1 ignora (escopo sempre universal). Default abaixo cobre
+    //   o único Local/Ambiente que existe hoje (bootstrap) — quando a
+    //   hierarquia real entrar (pendência 4), reviso escopoIds junto.
+    //   admin/administrativo = nível 1 (ex-"diretoria", ver migração
+    //   de perfis abaixo); pcm = nível 2 manutenção (Coordenador —
+    //   planejamento cobre a manutenção como um todo); manutencao/
+    //   producao = nível 4. Ninguém em nível 3 ainda — Tiago indica
+    //   quem é Coordenação(produção)/Supervisor(manutenção) quando
+    //   existir.
     usuarios: [
-      { login:'admin',                nome:'Administrador',          perfil:'admin',          senhaHash:'8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', ativo:true },
-      { login:'amauri',               nome:'Amauri Prymel',          perfil:'pcm',            senhaHash:'9b3dd215dbea2264058ab9802225bec9619a1fff6107f7e4a6d214a85d3bc1a6', ativo:true },
-      { login:'marcia',               nome:'Marcia Souza',           perfil:'pcm',            senhaHash:'d077e58dee24d6cc828a2b7ba7644912dc991d4f19a1f9b6ec825e45406bbe2f', ativo:true },
-      { login:'leonardo',             nome:'Leonardo Dias',          perfil:'pcm',            senhaHash:'18ccba186d8757c20cbf05d7a98b2c64f9f16eb64ea4a64659bbc5c9b7b3a7fe', ativo:true },
-      { login:'larissa',              nome:'Larissa Melo',           perfil:'pcm',            senhaHash:'95a8f6568fa7ad6aba1bdcd6620a471a0aca7d4c447f508a94ae4aab2ed86bd3', ativo:true },
-      { login:'welington',            nome:'Welington Oliveira',     perfil:'pcm',            senhaHash:'a08172a4e8c58a295ce348a2b6db6f3fa7ea02c243b98f0bcead321c2b444a56', ativo:true },
-      { login:'adilson',              nome:'Adilson Pereira',        perfil:'manutencao',     senhaHash:'56e726b51d77a6a0447646495f5f4cf74f53158516f77a2e3391f97893c3f42c', ativo:true },
-      { login:'carlos',               nome:'Carlos da Cruz',         perfil:'manutencao',     senhaHash:'7b85175b455060e3237e925f023053ca9515e8682a83c8b09911c724a1f8b75f', ativo:true },
-      { login:'danilo',               nome:'Danilo Mariano',         perfil:'manutencao',     senhaHash:'da9f6713671da24a575ffbe6f0749ecb613efe7f3887b5c9f3e6cc8a94982ae9', ativo:true },
-      { login:'joao',                 nome:'João Pereira',           perfil:'manutencao',     senhaHash:'ed2befb11499489e2570cb053f774b8ed93e89eddab3f78867a2a5f32c58845e', ativo:true },
-      { login:'paulo',                nome:'Paulo do Carmo',         perfil:'manutencao',     senhaHash:'9d87609a3584d3fca24b7084dc445c5b6f5b8ac2c6db3a1fb0d3ab7ffe27e042', ativo:true },
-      { login:'tiago',                nome:'Tiago Britici',          perfil:'manutencao',     senhaHash:'2c9a1c95814f31bb8459a7f7fc3536e73354699bace060e0876966878e1d1548', ativo:true },
-      { login:'marcio',               nome:'Marcio Machado',         perfil:'manutencao',     senhaHash:'52667e8b16cdc0747e5c2b6c57328cb2fd11e4fa8b9fd5ae94be6e3d1c71fcc1', ativo:true },
-      { login:'ricardo',              nome:'Ricardo Dias',           perfil:'administrativo', senhaHash:'65304dac3823069673aa9d3b90dcb9f44938e2d12f58509addc915d08922b64b', ativo:true },
-      { login:'angelica',             nome:'Angélica Prymel',        perfil:'administrativo', senhaHash:'1f254faa04cffa0d0a8c75f8514f0087429c37cc3516f7abb69c6660db2e6407', ativo:true },
-      { login:'nadine',               nome:'Nadine da Silva',        perfil:'producao',       senhaHash:'3af8e4b69bdc2acdabfabc682417cc1d53b84d0437aeb3787a054bfc68d9b2d4', ativo:true },
-      { login:'producao-pas',         nome:'Produção P.A.S.',        perfil:'producao',       senhaHash:'e3bd5c48fe5fe7ef75b759caad8271e312c3e52f25c71419bc79298be39f94cc', ativo:true },
-      { login:'producao-porcionados', nome:'Produção Porcionados',   perfil:'producao',       senhaHash:'a1c984d35d0aa1e78d56efa183c52f2404a6a7ce476e8c86f1b2296352c1392f', ativo:true },
-      { login:'producao-desossa',     nome:'Produção Desossa',       perfil:'producao',       senhaHash:'43ea106d1c415f100f93edc27918a3eba54e46138c180c635574a9c12cafae47', ativo:true },
-      { login:'qualidade',            nome:'Equipe de Qualidade',    perfil:'producao',       senhaHash:'7b670b41f14eba4f70d9b84ea3f78408f3d81090d211fd8add3120af336bad23', ativo:true },
-      { login:'expedicao',            nome:'Expedição',              perfil:'producao',       senhaHash:'5e143390c11c531f7794a72cae1fdf2b51955bee76c648a4ff6fbc5ad27cef82', ativo:true },
-      { login:'recebimento',          nome:'Recebimento',            perfil:'producao',       senhaHash:'f6fe6a3e7ce3556c0d7f5bf984597293b39ed672d064c4c86672b70b1e326ee3', ativo:true },
-      { login:'secundaria',           nome:'Secundária',             perfil:'producao',       senhaHash:'075018006606cc4ed45db6dcc2cdc2ebedc2f6121e809482dc0f7fc5c4a1e90b', ativo:true },
+      { login:'admin',                nome:'Administrador',          perfil:'admin',          senhaHash:'8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', ativo:true, lado:'ambos',       nivel:1, escopoIds:[] },
+      { login:'amauri',               nome:'Amauri Prymel',          perfil:'pcm',            senhaHash:'9b3dd215dbea2264058ab9802225bec9619a1fff6107f7e4a6d214a85d3bc1a6', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'marcia',               nome:'Marcia Souza',           perfil:'pcm',            senhaHash:'d077e58dee24d6cc828a2b7ba7644912dc991d4f19a1f9b6ec825e45406bbe2f', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'leonardo',             nome:'Leonardo Dias',          perfil:'pcm',            senhaHash:'18ccba186d8757c20cbf05d7a98b2c64f9f16eb64ea4a64659bbc5c9b7b3a7fe', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'larissa',              nome:'Larissa Melo',           perfil:'pcm',            senhaHash:'95a8f6568fa7ad6aba1bdcd6620a471a0aca7d4c447f508a94ae4aab2ed86bd3', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'welington',            nome:'Welington Oliveira',     perfil:'pcm',            senhaHash:'a08172a4e8c58a295ce348a2b6db6f3fa7ea02c243b98f0bcead321c2b444a56', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'adilson',              nome:'Adilson Pereira',        perfil:'manutencao',     senhaHash:'56e726b51d77a6a0447646495f5f4cf74f53158516f77a2e3391f97893c3f42c', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'carlos',               nome:'Carlos da Cruz',         perfil:'manutencao',     senhaHash:'7b85175b455060e3237e925f023053ca9515e8682a83c8b09911c724a1f8b75f', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'danilo',               nome:'Danilo Mariano',         perfil:'manutencao',     senhaHash:'da9f6713671da24a575ffbe6f0749ecb613efe7f3887b5c9f3e6cc8a94982ae9', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'joao',                 nome:'João Pereira',           perfil:'manutencao',     senhaHash:'ed2befb11499489e2570cb053f774b8ed93e89eddab3f78867a2a5f32c58845e', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'paulo',                nome:'Paulo do Carmo',         perfil:'manutencao',     senhaHash:'9d87609a3584d3fca24b7084dc445c5b6f5b8ac2c6db3a1fb0d3ab7ffe27e042', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'tiago',                nome:'Tiago Britici',          perfil:'manutencao',     senhaHash:'2c9a1c95814f31bb8459a7f7fc3536e73354699bace060e0876966878e1d1548', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'marcio',               nome:'Marcio Machado',         perfil:'manutencao',     senhaHash:'52667e8b16cdc0747e5c2b6c57328cb2fd11e4fa8b9fd5ae94be6e3d1c71fcc1', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'ricardo',              nome:'Ricardo Dias',           perfil:'administrativo', senhaHash:'65304dac3823069673aa9d3b90dcb9f44938e2d12f58509addc915d08922b64b', ativo:true, lado:'ambos',       nivel:1, escopoIds:[] },
+      { login:'angelica',             nome:'Angélica Prymel',        perfil:'administrativo', senhaHash:'1f254faa04cffa0d0a8c75f8514f0087429c37cc3516f7abb69c6660db2e6407', ativo:true, lado:'ambos',       nivel:1, escopoIds:[] },
+      { login:'nadine',               nome:'Nadine da Silva',        perfil:'producao',       senhaHash:'3af8e4b69bdc2acdabfabc682417cc1d53b84d0437aeb3787a054bfc68d9b2d4', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'producao-pas',         nome:'Produção P.A.S.',        perfil:'producao',       senhaHash:'e3bd5c48fe5fe7ef75b759caad8271e312c3e52f25c71419bc79298be39f94cc', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'producao-porcionados', nome:'Produção Porcionados',   perfil:'producao',       senhaHash:'a1c984d35d0aa1e78d56efa183c52f2404a6a7ce476e8c86f1b2296352c1392f', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'producao-desossa',     nome:'Produção Desossa',       perfil:'producao',       senhaHash:'43ea106d1c415f100f93edc27918a3eba54e46138c180c635574a9c12cafae47', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'qualidade',            nome:'Equipe de Qualidade',    perfil:'producao',       senhaHash:'7b670b41f14eba4f70d9b84ea3f78408f3d81090d211fd8add3120af336bad23', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'expedicao',            nome:'Expedição',              perfil:'producao',       senhaHash:'5e143390c11c531f7794a72cae1fdf2b51955bee76c648a4ff6fbc5ad27cef82', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'recebimento',          nome:'Recebimento',            perfil:'producao',       senhaHash:'f6fe6a3e7ce3556c0d7f5bf984597293b39ed672d064c4c86672b70b1e326ee3', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'secundaria',           nome:'Secundária',             perfil:'producao',       senhaHash:'075018006606cc4ed45db6dcc2cdc2ebedc2f6121e809482dc0f7fc5c4a1e90b', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
     ],
 
     // ── Salas ────────────────────────────────────────────────
@@ -126,10 +149,6 @@ export function getMockDB() {
       { id:'EXPEDIÇÃO',            ambienteId:'AMB_PRODUCAO', nome:'EXPEDIÇÃO', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
       { id:'RECEBIMENTO',          ambienteId:'AMB_PRODUCAO', nome:'RECEBIMENTO', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
     ],
-
-    // Sem aprovadores cadastrados ainda — Tiago define pela tela de
-    // Ativos (formulário de Sala), sem bloquear o uso do sistema.
-    aprovadoresLocal: [],
 
     // ── Máquinas (sala_id agora é FK real para salas[].id, em vez do
     // nome da sala como antes) ────────────────────────────────────
@@ -205,11 +224,17 @@ export function getMockDB() {
     ],
 
     // ── OS Executadas ────────────────────────────────────────
+    // ATENÇÃO (achado 2026-06-27): estes 4 registros usavam nomes de
+    // campo diferentes dos que os-executadas.js realmente lê (inicio→ini,
+    // duracao→durMin, parada→paradaMin, problema→prob, acao_prev→
+    // acaoPrev, foto→fotoUrl) — Duração/Parada/Ação Preventiva/Foto
+    // apareciam em branco no detalhe/print/CSV/WhatsApp dessas 4 OS.
+    // Corrigido abaixo para o nome que o código de fato usa.
     ordens: [
-      { numero:'OS-0001', data:'2026-05-27', sala:'TEMPERADOS',   maq:'DUPLAVAC',                      tag:'',          tipo:'Corretiva',  prioridade:'1', manut:'Paulo do Carmo',  inicio:'10:05', fim:'10:25', duracao:20,  parada:20,  problema:'Solda',                                                                                  acao:'Limpeza da resistência e borracha',        acao_prev:'', foto:'', pecas:'', origem:'direta', ref:'', criadoEm:'2026-05-27T13:27:05.411Z' },
-      { numero:'OS-0002', data:'2026-05-27', sala:'BACALHAU',     maq:'TERMOFORMADORA ULMA',           tag:'',          tipo:'Corretiva',  prioridade:'2', manut:'Danilo Mariano',  inicio:'13:40', fim:'14:09', duracao:29,  parada:29,  problema:'Impressão em pontos saindo falhada.',                                                      acao:'A borracha de impressão estava com muita sujeira, acúmulo da própria impressão. Realizado limpeza nos pontos que estava ocasionando em falha, aumentado parâmetro de intensidade e realizado teste. Teve uma melhora significativa, liberado máquina para produção e instruído operador.', acao_prev:'', foto:'', pecas:'', origem:'direta', ref:'', criadoEm:'2026-05-27T17:12:19.125Z' },
-      { numero:'OS-0140', data:'2026-06-16', sala:'CARNE MOÍDA',  maq:'__outros__',                    tag:'',          tipo:'Corretiva',  prioridade:'2', manut:'Tiago Britici',   inicio:'08:50', fim:'09:20', duracao:30,  parada:30,  problema:'Elevador de Bobinas não estava ligando.',                                            acao:'Ao abrir a tampa do quadro elétrico foi identificado acúmulo de água no seu interior, causando a danificação da chave seccionadora. Realizamos a ligação direta no disjuntor motor do equipamento e solicitamos uma nova seccionadora para substituição.', acao_prev:'', foto:'https://drive.google.com/file/d/1WQuKSqbBtCrEs_NNT_0AbOYSgX8RW2Z1/view', pecas:'', origem:'direta', ref:'', criadoEm:'2026-06-16T13:54:24.270Z' },
-      { numero:'OS-0177', data:'2026-06-18', sala:'CÁRNEOS',      maq:'TERMOFORMADORA ULMA TFS600',    tag:'',          tipo:'Corretiva',  prioridade:'1', manut:'Danilo Mariano',  inicio:'14:40', fim:'14:59', duracao:19,  parada:19,  problema:'Faca rotativa quebrada.',                                                            acao:'Realizado a troca de 1 faca quebrada e troca de 2 molas de outros 2 conjuntos de faca rotativa.', acao_prev:'', foto:'', pecas:'', origem:'direta', ref:'', criadoEm:'2026-06-18T18:00:36.627Z' },
+      { numero:'OS-0001', data:'2026-05-27', sala:'TEMPERADOS',   maq:'DUPLAVAC',                      tag:'',          tipo:'Corretiva',  prioridade:'1', manut:'Paulo do Carmo',  ini:'10:05', fim:'10:25', durMin:20,  paradaMin:20,  prob:'Solda',                                                                                  acao:'Limpeza da resistência e borracha',        acaoPrev:'', fotoUrl:'', pecas:'', origem:'direta', ref:'', criadoEm:'2026-05-27T13:27:05.411Z' },
+      { numero:'OS-0002', data:'2026-05-27', sala:'BACALHAU',     maq:'TERMOFORMADORA ULMA',           tag:'',          tipo:'Corretiva',  prioridade:'2', manut:'Danilo Mariano',  ini:'13:40', fim:'14:09', durMin:29,  paradaMin:29,  prob:'Impressão em pontos saindo falhada.',                                                      acao:'A borracha de impressão estava com muita sujeira, acúmulo da própria impressão. Realizado limpeza nos pontos que estava ocasionando em falha, aumentado parâmetro de intensidade e realizado teste. Teve uma melhora significativa, liberado máquina para produção e instruído operador.', acaoPrev:'', fotoUrl:'', pecas:'', origem:'direta', ref:'', criadoEm:'2026-05-27T17:12:19.125Z' },
+      { numero:'OS-0140', data:'2026-06-16', sala:'CARNE MOÍDA',  maq:'__outros__',                    tag:'',          tipo:'Corretiva',  prioridade:'2', manut:'Tiago Britici',   ini:'08:50', fim:'09:20', durMin:30,  paradaMin:30,  prob:'Elevador de Bobinas não estava ligando.',                                            acao:'Ao abrir a tampa do quadro elétrico foi identificado acúmulo de água no seu interior, causando a danificação da chave seccionadora. Realizamos a ligação direta no disjuntor motor do equipamento e solicitamos uma nova seccionadora para substituição.', acaoPrev:'', fotoUrl:'https://drive.google.com/file/d/1WQuKSqbBtCrEs_NNT_0AbOYSgX8RW2Z1/view', pecas:'', origem:'direta', ref:'', criadoEm:'2026-06-16T13:54:24.270Z' },
+      { numero:'OS-0177', data:'2026-06-18', sala:'CÁRNEOS',      maq:'TERMOFORMADORA ULMA TFS600',    tag:'',          tipo:'Corretiva',  prioridade:'1', manut:'Danilo Mariano',  ini:'14:40', fim:'14:59', durMin:19,  paradaMin:19,  prob:'Faca rotativa quebrada.',                                                            acao:'Realizado a troca de 1 faca quebrada e troca de 2 molas de outros 2 conjuntos de faca rotativa.', acaoPrev:'', fotoUrl:'', pecas:'', origem:'direta', ref:'', criadoEm:'2026-06-18T18:00:36.627Z' },
     ],
 
     // ── OS Planejadas ────────────────────────────────────────
@@ -231,34 +256,6 @@ export function getMockDB() {
         descricao:'Realizar aferição das balança da fatiadora Weber',
         status:'Atrasada', manutExec:'', dataExec:'', inicio:'', fim:'', duracao:0,
         servicoExec:'', criadoEm:'2026-06-10T21:55:24.612Z', concluidoEm:'',
-      },
-    ],
-
-    // ── Solicitações ─────────────────────────────────────────
-    solicitacoes: [
-      {
-        numero:'SOL-0001', sala:'LÁCTEOS', maq:'FATIADORA AUTOMÁTICA WEBER WLN905',
-        tipo:'Corretiva', prioridade:'1',
-        descricao:'Botão de emergência da fatiadora não está funcionando',
-        status:'Concluída', solicitante:'Leonardo Dias', manutExec:'Tiago Britici',
-        dataExec:'2026-06-10', servicoExec:'Após abrimos painel da IHM foi verificado que o bloco de contato do botão de emergência se soltou - o mesmo está apresentando desgaste. Realizado solicitação do material para substituição futura.',
-        criadoEm:'2026-06-10T14:07:36.206Z', concluidoEm:'2026-06-10T17:38:17.525Z',
-      },
-      {
-        numero:'SOL-0002', sala:'CARNE MOÍDA', maq:'__outros__',
-        tipo:'Corretiva', prioridade:'3',
-        descricao:'Vazamentos de água do registro na sala.',
-        status:'Não Executada', solicitante:'Leonardo Dias', manutExec:'',
-        dataExec:'', servicoExec:'',
-        criadoEm:'2026-06-10T14:10:05.776Z', concluidoEm:'',
-      },
-      {
-        numero:'SOL-0003', sala:'LÁCTEOS', maq:'__outros__',
-        tipo:'Corretiva', prioridade:'3',
-        descricao:'Vazamentos de água no registro.',
-        status:'Concluída', solicitante:'Leonardo Dias', manutExec:'Cícero',
-        dataExec:'2026-06-10', servicoExec:'Foi realizado reaperto das conexões no registro.',
-        criadoEm:'2026-06-10T14:10:45.446Z', concluidoEm:'2026-06-10T14:12:11.974Z',
       },
     ],
 
