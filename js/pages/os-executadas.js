@@ -10,18 +10,29 @@ import { elegiveisProd, elegiveisManut } from '../hierarquia.js';
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
 let _concluirId = null, _concluirTipo = null;
+// ⚠️ Mesmo bug do os-abertura.js (corrigido lá em 2026-06-30): o
+// router alterna .on mas não recria o DOM desta página, e init() roda
+// a cada navegação. Sem esta guarda, cada visita empilhava mais um
+// listener em btn-concluir/btn-export-csv/md-*-btn + todos os filtros
+// e headers de ordenação — N visitas = _concluir() disparando N vezes
+// por clique (apiPost/historico duplicados). Encontrado e corrigido
+// em 2026-07-01, antes do Bloco 5.
+let _bound = false;
 
 export function init() {
   _populateFiltros();
-  _bindFiltros();
-  _bindSortHeaders();
-  document.getElementById('md-wa-btn')?.addEventListener('click', () => {
-    navigator.clipboard.writeText(document.getElementById('md-wa')?.textContent||'').then(()=>showToast('Copiado!'));
-  });
-  document.getElementById('md-print-btn')?.addEventListener('click', _imprimirOS);
-  document.getElementById('md-rac-btn')?.addEventListener('click', () => { if(_curOS) abrirRAC(_curOS); });
-  document.getElementById('btn-concluir')?.addEventListener('click', _concluir);
-  document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
+  if (!_bound) {
+    _bound = true;
+    _bindFiltros();
+    _bindSortHeaders();
+    document.getElementById('md-wa-btn')?.addEventListener('click', () => {
+      navigator.clipboard.writeText(document.getElementById('md-wa')?.textContent||'').then(()=>showToast('Copiado!'));
+    });
+    document.getElementById('md-print-btn')?.addEventListener('click', _imprimirOS);
+    document.getElementById('md-rac-btn')?.addEventListener('click', () => { if(_curOS) abrirRAC(_curOS); });
+    document.getElementById('btn-concluir')?.addEventListener('click', _concluir);
+    document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
+  }
   render();
 }
 
@@ -154,6 +165,7 @@ export function verDet(numero) {
     ${o.acaoPrev?`<div class="dr"><span class="dl">Ação Preventiva</span><span class="dv">${o.acaoPrev}</span></div>`:''}
     ${o.fotoUrl?`<div class="dr" style="flex-direction:column;gap:8px"><span class="dl">📷 Foto</span><a href="${o.fotoUrl}" target="_blank"><img src="${o.fotoUrl}" style="max-width:100%;max-height:220px;border-radius:var(--rs);object-fit:contain;border:1px solid var(--bord)" alt="Foto OS"></a></div>`:''}
     ${o.origem&&o.origem!=='direta'?`<div class="dr"><span class="dl">Origem</span><span class="dv" style="color:var(--red)">${o.origemNum||o.origem}</span></div>`:''}
+    ${_blocoConcluidaDet(o)}
     ${_blocoAprovacao(o)}`;
   const wa=`*${o.numero} — Ordem de Serviço*\n\n*Sala:* ${o.sala}\n*Máquina:* ${o.maq}\n*Problema:* ${o.prob||'—'}\n*Tipo:* ${o.tipo}\n*Prioridade:* ${o.prioridade}\n*Tempo:* ${o.ini||'?'} – ${o.fim||'?'} (${o.durMin||'?'}min)\n*Parada:* ${o.paradaMin||'?'}min\n\n${o.acao||''}\n\n_Manutentor: ${o.manut}_`;
   const waEl=document.getElementById('md-wa'), waBtn=document.getElementById('md-wa-btn');
@@ -163,7 +175,52 @@ export function verDet(numero) {
   document.getElementById('md-rac-btn').style.display=_precisaRAC(o)?'inline-block':'none';
   window._aprovarProd  = _aprovarProd;
   window._aprovarManut = _aprovarManut;
+  window._toggleConcluidaDet = _toggleConcluidaDet;
   openM('m-det');
+}
+
+// Bloco 5 — checkbox "Concluída" no detalhe da OS (m-det). Só faz
+// sentido pra status que já têm um intervalo ativo preenchido
+// (aguardando_aprovacao/concluida) — pra 'aberta' não há nada ativo
+// pra "desconcluir"; mostra só um resumo do histórico, se existir, e
+// aponta pro botão Atender.
+function _blocoConcluidaDet(o) {
+  const hist = o.historico_intervalos || [];
+  if (o.status === 'aberta') {
+    if (!hist.length) return '';
+    return `<div class="dr"><span class="dl">Histórico</span><span class="dv" style="color:var(--txt3)">${hist.length} intervalo(s) anterior(es) — use "▶ Atender" pra continuar</span></div>`;
+  }
+  if (o.status !== 'aguardando_aprovacao' && o.status !== 'concluida') return '';
+  const histTag = hist.length ? ` <span style="color:var(--txt3);font-weight:400">(+${hist.length} intervalo(s) anterior(es))</span>` : '';
+  return `
+    <div class="dr" style="align-items:center;gap:8px">
+      <input type="checkbox" id="det-concluida" checked style="width:16px;height:16px;margin:0"
+        onchange="window._toggleConcluidaDet('${o.numero}', this.checked)">
+      <label for="det-concluida" style="margin:0;font-weight:600;cursor:pointer">Concluída${histTag}</label>
+    </div>`;
+}
+
+// Desmarcar aqui = mesma ação do checkbox no modal de Atender, mas a
+// partir dos dados JÁ salvos na OS (não de um formulário aberto).
+// Marcar de volta não faz nada por si só (não existe ação simétrica —
+// reabrir uma OS concluída não é o mesmo que "concluir de novo" sem
+// passar pelo fluxo de aprovação); por isso só tratamos o uncheck.
+function _toggleConcluidaDet(numero, checked) {
+  if (checked) { verDet(numero); return; } // ignora recheck, só re-renderiza como estava
+  const db = getDB(), o = db.ordens.find(x => x.numero === numero);
+  if (!o) return;
+  if (!confirm(`Marcar ${o.numero} como NÃO concluída? O intervalo atual (${o.ini||'?'}–${o.fim||'?'}) vai pro histórico e a OS volta pra "Aberta".`)) {
+    verDet(numero); // reverte visualmente o checkbox (re-renderiza como estava)
+    return;
+  }
+  const agora = new Date().toISOString();
+  _registrarIntervaloParcial(o, {
+    manut: o.manut, manutLogin: o.manutLogin, ini: o.ini, fim: o.fim,
+    durMin: o.durMin, paradaMin: o.paradaMin, acao: o.acao, agora,
+  });
+  saveDB();
+  showToast(`${o.numero} — voltou pra "Aberta", intervalo no histórico.`, 'ok');
+  verDet(numero); render(); updOSHoje();
 }
 
 function _blocoAprovacao(o) {
@@ -245,6 +302,8 @@ export function abrirConcluir(id, tipo) {
     </div>`;
   sv('mc-dt',today()); _populateManutentoresModal(); sv('mc-mn',CU?.login||'');
   ['mc-in','mc-fm','mc-ds','mc-parada'].forEach(id=>sv(id,''));
+  const cb = document.getElementById('mc-concluida');
+  if (cb) cb.checked = true; // padrão: marcada (fluxo normal, igual antes do Bloco 5)
   openM('m-con');
 }
 
@@ -264,6 +323,7 @@ async function _concluir() {
   const manutLogin=v('mc-mn'), desc=v('mc-ds').trim(),
         data=v('mc-dt'), ini=v('mc-in'), fim=v('mc-fm'),
         parada=parseInt(v('mc-parada'))||0;
+  const concluida = document.getElementById('mc-concluida')?.checked !== false;
   if(!manutLogin||!desc){showToast('Selecione o manutentor e preencha o serviço executado.','er');return;}
   const manutUser=db.usuarios.find(u=>u.login===manutLogin);
   const manut=manutUser?.nome||manutLogin;
@@ -272,11 +332,26 @@ async function _concluir() {
   if(ini&&fim){const[h1,m1]=ini.split(':').map(Number),[h2,m2]=fim.split(':').map(Number);durMin=Math.max(0,(h2*60+m2)-(h1*60+m1));if(!paradaMin)paradaMin=durMin;}
 
   if (_concluirTipo === 'os') {
+    const o = db.ordens.find(x=>x.numero===_concluirId);
+    if(!o){showToast('OS não encontrada.','er');return;}
+
+    if (!concluida) {
+      // Bloco 5: atendimento parcial — snapshot do intervalo ativo vai
+      // pro histórico, campos ativos limpam, status volta pra 'aberta'
+      // (retomável depois via "Continuar O.S.", Bloco 6, ainda não
+      // implementado). manut/manutLogin ficam (útil como sugestão de
+      // quem continua) — só os 7 campos de intervalo são limpos, igual
+      // à regra combinada.
+      _registrarIntervaloParcial(o, {manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,agora});
+      saveDB(); closeM('m-con');
+      render(); updOSHoje();
+      showToast(`${o.numero} — intervalo registrado, OS continua aberta.`,'ok');
+      return;
+    }
+
     // Atender uma OS aberta por produção: atualiza o mesmo registro,
     // não cria uma nova OS. aprovadorProdLogin já foi definido na
     // abertura (quem relatou o problema) — mantém.
-    const o = db.ordens.find(x=>x.numero===_concluirId);
-    if(!o){showToast('OS não encontrada.','er');return;}
     Object.assign(o,{manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,status:'aguardando_aprovacao'});
     saveDB(); closeM('m-con');
     _logEdit('Atendeu OS',o.numero,`${o.sala} · ${o.maq}`);
@@ -286,9 +361,27 @@ async function _concluir() {
     return;
   }
 
-  // tipo 'plan' — concluir planejada, gera uma OS nova
+  // tipo 'plan'
   const item=db.planejadas.find(x=>x.numero===_concluirId);
   if(!item){showToast('Item não encontrado.','er');return;}
+
+  if (!concluida) {
+    // Bloco 5: planejada sem OS gerada ainda — não existe histórico de
+    // intervalos pra ela (schema não modela isso, e não faz sentido:
+    // só nasce 1 OS no momento da conclusão de fato). "Não concluída"
+    // aqui só grava a tentativa mais recente nos mesmos campos de
+    // execução do item (sobrescreve a anterior, se houver) e marca
+    // 'Em andamento' — status já existe no enum planejada_status.
+    Object.assign(item,{status:'Em andamento',manut,manutLogin,dtExec:data,ini,fim,durMin,paradaMin,desc2:desc});
+    saveDB(); closeM('m-con');
+    _logEdit('Registrou andamento',item.numero,`${item.sala} · ${item.maq}`);
+    render(); updOSHoje();
+    showToast(`${item.numero} — andamento registrado, ainda não concluída.`,'ok');
+    apiPost({action:'update',sheet:'planejadas',id:item.numero,idCol:'PL_Numero',row:{Status:'Em andamento',Manutentor_Exec:manut,Data_Execucao:data,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Servico_Executado:desc}});
+    return;
+  }
+
+  // concluir planejada, gera uma OS nova
   const numero=_genOS();
   const os={
     id:crypto.randomUUID(),numero,sala:item.sala,maq:item.maq,tipo:item.tipo,prioridade:item.prioridade,
@@ -308,6 +401,27 @@ async function _concluir() {
   showToast(`${item.numero} concluída → ${numero} registrada.`,'ok');
   apiPost({action:'update',sheet:'planejadas',id:item.numero,idCol:'PL_Numero',row:{Status:'Concluída',Manutentor_Exec:manut,Data_Execucao:data,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Servico_Executado:desc,Concluido_Em:agora}});
   apiPost({action:'append',sheet:'ordens',row:{OS_Numero:numero,Data:data||today(),Sala:item.sala,Maquina:item.maq,Tipo:item.tipo,Prioridade:item.prioridade,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Problema:item.descricao||'',Acao_Executada:desc,Origem:_concluirTipo,OS_Origem_Ref:item.numero,Criado_Em:agora}});
+}
+
+// Bloco 5 — move o intervalo ativo (o que acabou de ser preenchido no
+// modal, para uma OS que já existia com status 'aberta'/'aguardando_
+// aprovacao') pro histórico e limpa os campos ativos, deixando a OS
+// pronta pra ser retomada. Reaproveitada tanto pelo modal de Atender
+// quanto pelo checkbox no detalhe (m-det).
+function _registrarIntervaloParcial(o, {manut, manutLogin, ini, fim, durMin, paradaMin, acao, agora}) {
+  o.historico_intervalos = o.historico_intervalos || [];
+  o.historico_intervalos.push({
+    manut, manutLogin, ini, fim, durMin, paradaMin,
+    acao: acao || '', acaoPrev: o.acaoPrev || '', fotoUrl: o.fotoUrl || '',
+    registradoEm: agora,
+  });
+  // Campos ativos limpos (regra combinada: só estes 7, manut/manutLogin
+  // ficam como estavam — sugestão de quem continua depois).
+  Object.assign(o, {ini:'', fim:'', durMin:0, paradaMin:0, acao:'', acaoPrev:'', fotoUrl:'', status:'aberta',
+    aprovadoProdEm:'', aprovadoManutEm:''}); // reabrir exige nova aprovação quando o trabalho for retomado
+  _logEdit('Registrou intervalo (não concluída)', o.numero, `${o.sala} · ${o.maq}`);
+  apiPost({action:'update',sheet:'ordens',id:o.numero,idCol:'OS_Numero',row:{Status:'aberta',Hora_Inicio:'',Hora_Fim:'',Duracao_Min:0,Tempo_Parada_Min:0,Acao_Executada:''}});
+  apiPost({action:'append',sheet:'os_intervalos',row:{OS_Numero:o.numero,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Tarefas_Executadas:acao,Registrado_Em:agora}});
 }
 
 export function abrirRAC(os) {
