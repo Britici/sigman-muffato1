@@ -174,7 +174,21 @@
             <div class="fg"><label>Sala</label><select id="ab-sl"><option value="">Selecione o ambiente</option></select></div>
             <div class="fg"><label>Máquina / Ativo</label><select id="ab-mq"><option value="">Selecione a sala</option></select></div>
             <div class="fg"><label>Tipo de Ação</label><select id="ab-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
-            <div class="fg"><label>Prioridade</label><select id="ab-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
+            <div class="fg">
+              <label>Prioridade</label>
+              <div class="psel" id="ab-pr-sel">
+                <input type="hidden" id="ab-pr">
+                <button type="button" class="psel-btn" id="ab-pr-btn">
+                  <span class="psel-placeholder" id="ab-pr-txt">Selecione...</span>
+                </button>
+                <div class="psel-menu">
+                  <button type="button" class="psel-item" data-val="1"><span class="psel-dot" style="background:var(--red)"></span>1 – Crítico</button>
+                  <button type="button" class="psel-item" data-val="2"><span class="psel-dot" style="background:var(--yel)"></span>2 – Alta</button>
+                  <button type="button" class="psel-item" data-val="3"><span class="psel-dot" style="background:var(--blu)"></span>3 – Média</button>
+                  <button type="button" class="psel-item" data-val="4"><span class="psel-dot" style="background:var(--grn)"></span>4 – Baixa</button>
+                </div>
+              </div>
+            </div>
             <div class="fg" id="ab-mn-wrap"><label>Manutentor Responsável</label><select id="ab-mn"><option value="">Selecione...</option></select></div>
           </div>
         </div>
