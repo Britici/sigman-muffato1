@@ -20,11 +20,13 @@ const COLS = [
 
 const LADO_LABEL  = { producao: 'Produção', manutencao: 'Manutenção', ambos: 'Ambos' };
 // Rótulo de nível depende do lado — mesmo número, cargo diferente.
+// Admin NÃO usa este esquema (comando universal, fora da hierarquia).
 const NIVEL_LABEL = {
-  producao:   { 1: 'Diretoria', 2: 'Gerência',    3: 'Coordenação', 4: 'Produção'   },
-  manutencao: { 1: 'Diretoria', 2: 'Coordenador', 3: 'Supervisor',  4: 'Manutenção' },
-  ambos:      { 1: 'Diretoria', 2: 'Diretoria',   3: 'Diretoria',   4: 'Diretoria'  },
+  producao:   { 1: 'Diretoria/Coordenação', 2: 'Supervisão', 3: 'Produção'    },
+  manutencao: { 1: 'Diretoria/Coordenador', 2: 'Supervisor', 3: 'Manutenção'  },
+  ambos:      { 1: 'Diretoria',             2: 'Diretoria',  3: 'Diretoria'   },
 };
+const ESCOPO_LABEL = { 1: 'Local', 2: 'Ambiente', 3: 'Sala' };
 function _nivelLabel(u) {
   if (!u.nivel) return '—';
   const lado = u.lado || 'ambos';
@@ -146,8 +148,7 @@ function _compareUsuarios(a, b, col) {
 function _rowUsuario(u) {
   const isSelf = CU?.login === u.login;
   const roleLabel = ROLES[u.perfil]?.label || u.perfil;
-  const escopoTxt = !u.nivel ? '' : u.nivel === 1 ? 'Universal'
-    : `${(u.escopoIds || []).length} ${u.nivel === 2 ? 'Local(is)' : 'Ambiente(s)'}`;
+  const escopoTxt = (!u.nivel || u.perfil === 'admin') ? '' : `${(u.escopoIds || []).length} ${ESCOPO_LABEL[u.nivel]}(s)`;
 
   return `
     <tr>
@@ -209,7 +210,7 @@ function _openForm(login) {
         ℹ️ A senha provisória será igual ao login. O usuário deve trocá-la
         no primeiro acesso, ou o administrador pode resetá-la depois.
       </div>` : ''}
-      <div class="fg-row" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bord)">
+      <div class="fg-row" id="me-hierarquia-wrap" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bord)">
         <div class="fg"><label>Hierarquia — Lado</label><select id="me-lado"><option value="">— Sem hierarquia —</option>${ladoOptions}</select></div>
         <div class="fg"><label>Nível</label><select id="me-nivel"></select></div>
       </div>
@@ -221,6 +222,7 @@ function _openForm(login) {
       <div style="font-size:12px;color:var(--txt3);padding:4px 2px;margin-top:6px">
         Define o que fica pré-preenchido na Abertura de O.S. e quem pode
         aprovar OS — não é mais por checkbox em cada Sala (Ativos).
+        Perfil Administrador não usa hierarquia (comando universal).
       </div>`;
 
     // Auto-gera login a partir do nome (só na criação)
@@ -233,7 +235,9 @@ function _openForm(login) {
 
     document.getElementById('me-lado').addEventListener('change', () => _atualizarNivelEscopo(u));
     document.getElementById('me-nivel').addEventListener('change', () => _populateEscopo(u));
+    document.getElementById('me-perfil').addEventListener('change', () => _toggleHierarquiaParaAdmin());
     _atualizarNivelEscopo(u);
+    _toggleHierarquiaParaAdmin();
   }
 
   document.getElementById('btn-edit-save').onclick = _saveForm;
@@ -242,6 +246,8 @@ function _openForm(login) {
 
 // Nível disponível depende do lado. 'ambos' (diretoria) só existe no
 // nível 1 — trava ali. Repopula nível e, em seguida, o escopo.
+// Perfil 'admin' não usa hierarquia (comando universal) — bloqueado
+// por _toggleHierarquiaParaAdmin, chamado separadamente.
 function _atualizarNivelEscopo(u) {
   const ladoSel  = document.getElementById('me-lado');
   const nivelSel = document.getElementById('me-nivel');
@@ -253,7 +259,7 @@ function _atualizarNivelEscopo(u) {
     return;
   }
   nivelSel.disabled = false;
-  const niveisDisponiveis = lado === 'ambos' ? [1] : [1, 2, 3, 4];
+  const niveisDisponiveis = lado === 'ambos' ? [1] : [1, 2, 3];
   nivelSel.innerHTML = niveisDisponiveis
     .map(n => `<option value="${n}">${n} · ${NIVEL_LABEL[lado][n]}</option>`).join('');
   const nivelAtual = u?.lado === lado ? u?.nivel : null;
@@ -261,25 +267,44 @@ function _atualizarNivelEscopo(u) {
   _populateEscopo(u);
 }
 
-// Escopo: nível 1 = universal (sem seleção); nível 2 = Locais; níveis
-// 3/4 = Ambientes.
+// Perfil admin não tem lado/nível/escopo — trava os campos.
+function _toggleHierarquiaParaAdmin() {
+  const perfil = document.getElementById('me-perfil')?.value;
+  const wrap = document.getElementById('me-hierarquia-wrap');
+  if (!wrap) return;
+  const ehAdmin = perfil === 'admin';
+  wrap.style.display = ehAdmin ? 'none' : '';
+  if (ehAdmin) {
+    sv_select('me-lado', '');
+    document.getElementById('me-nivel').innerHTML = '<option value="">—</option>';
+    document.getElementById('me-escopo-wrap').style.display = 'none';
+  }
+}
+function sv_select(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+
+// Escopo: nível 1 = Locais; nível 2 = Ambientes; nível 3 = Salas
+// (direto, sem herança — manutentor/produção escolhe a própria sala).
 function _populateEscopo(u) {
   const db = getDB();
   const wrap  = document.getElementById('me-escopo-wrap');
   const label = document.getElementById('me-escopo-label');
   const sel   = document.getElementById('me-escopo');
   const nivel = parseInt(document.getElementById('me-nivel').value) || null;
-  if (!nivel || nivel === 1) { wrap.style.display = 'none'; sel.innerHTML = ''; return; }
+  if (!nivel) { wrap.style.display = 'none'; sel.innerHTML = ''; return; }
   wrap.style.display = '';
   const cur = u?.nivel === nivel ? (u?.escopoIds || []) : [];
-  if (nivel === 2) {
+  if (nivel === 1) {
     label.textContent = 'Escopo — Local(is)';
     sel.innerHTML = db.locais.filter(l => l.ativo !== false)
       .map(l => `<option value="${l.id}" ${cur.includes(l.id) ? 'selected' : ''}>${l.nome}</option>`).join('');
-  } else {
+  } else if (nivel === 2) {
     label.textContent = 'Escopo — Ambiente(s)';
     sel.innerHTML = db.ambientes.filter(a => a.ativo !== false)
       .map(a => `<option value="${a.id}" ${cur.includes(a.id) ? 'selected' : ''}>${a.nome}</option>`).join('');
+  } else {
+    label.textContent = 'Escopo — Sala(s)';
+    sel.innerHTML = db.salas.filter(s => s.ativo !== false)
+      .map(s => `<option value="${s.id}" ${cur.includes(s.id) ? 'selected' : ''}>${s.nome}</option>`).join('');
   }
 }
 
@@ -288,9 +313,10 @@ async function _saveForm() {
   const cargo  = document.getElementById('me-cargo')?.value?.trim() || '';
   const login  = document.getElementById('me-login')?.value?.trim().toLowerCase();
   const perfil = document.getElementById('me-perfil')?.value;
-  const lado   = document.getElementById('me-lado')?.value || '';
-  const nivel  = parseInt(document.getElementById('me-nivel')?.value) || null;
-  const escopoIds = lado && nivel && nivel !== 1
+  const ehAdmin = perfil === 'admin';
+  const lado   = ehAdmin ? '' : (document.getElementById('me-lado')?.value || '');
+  const nivel  = ehAdmin ? null : (parseInt(document.getElementById('me-nivel')?.value) || null);
+  const escopoIds = (!ehAdmin && lado && nivel)
     ? [...document.getElementById('me-escopo').selectedOptions].map(o => o.value)
     : [];
 
