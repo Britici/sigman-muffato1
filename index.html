@@ -431,6 +431,11 @@
       <div class="fg"><label>Hora Fim</label><input type="time" id="mc-fm"></div>
       <div class="fg"><label>Tempo de Parada (min)</label><input type="number" id="mc-parada" placeholder="0" min="0"></div>
       <div class="fg fg-full"><label>Serviço Executado</label><textarea id="mc-ds" placeholder="Descreva o que foi feito..."></textarea></div>
+      <div class="fg fg-full" style="flex-direction:row;align-items:center;gap:8px;padding-top:4px">
+        <input type="checkbox" id="mc-concluida" checked style="width:16px;height:16px;margin:0">
+        <label for="mc-concluida" style="margin:0;font-weight:600;cursor:pointer">Concluída</label>
+        <span style="font-size:11px;color:var(--txt3)">— desmarque se o serviço ainda vai continuar depois (fica "Aberta", este intervalo entra no histórico)</span>
+      </div>
     </div>
     <div class="fa">
       <button class="btn btn-gh" data-close="m-con">Cancelar</button>
