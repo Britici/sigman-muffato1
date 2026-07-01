@@ -21,6 +21,14 @@ import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.
 import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js';
 
 let _fotoDataUrl = null;
+// ⚠️ Este módulo tem DOM ESTÁTICO em index.html (o router só alterna
+// a classe .on em navegação, não recria o markup) — mas init() roda
+// a cada navegação. Sem esta guarda, addEventListener empilha 1
+// listener a mais por visita à página, e "Registrar Ordem" passaria
+// a salvar a mesma OS N vezes depois de N visitas. Bug encontrado e
+// corrigido em 2026-06-30 (já afetava todos os listeners deste
+// módulo antes do dropdown de Prioridade existir).
+let _bound = false;
 
 export function init() {
   _populateUnidadeLocal();
@@ -28,14 +36,55 @@ export function init() {
   _populateSalas();
   _populateManutentores();
   _toggleCamposPorPerfil();
-  document.getElementById('ab-amb')?.addEventListener('change', _populateSalas);
-  document.getElementById('ab-sl')?.addEventListener('change', _populateMaquinas);
-  document.getElementById('btn-ab-clear')?.addEventListener('click', _limpar);
-  document.getElementById('btn-ab-save')?.addEventListener('click', _salvar);
-  setupPhotoPreview('ab-photo-input', 'ab-photo-preview', (b64, file) => {
-    _fotoDataUrl = `data:${file.type};base64,${b64}`;
-  });
+  if (!_bound) {
+    _bound = true;
+    document.getElementById('ab-amb')?.addEventListener('change', _populateSalas);
+    document.getElementById('ab-sl')?.addEventListener('change', _populateMaquinas);
+    document.getElementById('btn-ab-clear')?.addEventListener('click', _limpar);
+    document.getElementById('btn-ab-save')?.addEventListener('click', _salvar);
+    setupPhotoPreview('ab-photo-input', 'ab-photo-preview', (b64, file) => {
+      _fotoDataUrl = `data:${file.type};base64,${b64}`;
+    });
+    _bindPrioridadeDropdown();
+  }
   _limpar();
+}
+
+// Dropdown customizado de Prioridade (Bloco 2) — <select> nativo não
+// permite estilizar bolinha colorida por option de forma confiável
+// entre navegadores. Ordem de cor confirmada com Tiago: 1 vermelho,
+// 2 amarelo, 3 azul, 4 verde.
+const PRIORIDADE_LABEL = { 1: '1 – Crítico', 2: '2 – Alta', 3: '3 – Média', 4: '4 – Baixa' };
+const PRIORIDADE_COR   = { 1: 'var(--red)', 2: 'var(--yel)', 3: 'var(--blu)', 4: 'var(--grn)' };
+
+function _bindPrioridadeDropdown() {
+  const wrap = document.getElementById('ab-pr-sel');
+  const btn  = document.getElementById('ab-pr-btn');
+  if (!wrap || !btn) return;
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    wrap.classList.toggle('open');
+  });
+  wrap.querySelectorAll('.psel-item').forEach(item => {
+    item.addEventListener('click', () => {
+      _setPrioridade(item.dataset.val);
+      wrap.classList.remove('open');
+    });
+  });
+  document.addEventListener('click', () => wrap.classList.remove('open'));
+}
+
+function _setPrioridade(val) {
+  sv('ab-pr', val || '');
+  const txt = document.getElementById('ab-pr-txt');
+  if (!txt) return;
+  if (!val) {
+    txt.className = 'psel-placeholder';
+    txt.innerHTML = 'Selecione...';
+  } else {
+    txt.className = '';
+    txt.innerHTML = `<span class="psel-dot" style="display:inline-block;background:${PRIORIDADE_COR[val]}"></span>${PRIORIDADE_LABEL[val]}`;
+  }
 }
 
 // Esconde os campos que só fazem sentido pra quem já atendeu no ato
@@ -125,7 +174,8 @@ function _populateManutentores() {
 }
 
 function _limpar() {
-  ['ab-tp', 'ab-pr', 'ab-pb', 'ab-ac', 'ab-ap', 'ab-in', 'ab-fm', 'ab-parada'].forEach(id => sv(id, ''));
+  ['ab-tp', 'ab-pb', 'ab-ac', 'ab-ap', 'ab-in', 'ab-fm', 'ab-parada'].forEach(id => sv(id, ''));
+  _setPrioridade('');
   sv('ab-amb', '');
   _populateAmbientes(); // repopula e re-aplica pré-seleção (Ambiente único no escopo)
   sv('ab-sl', '');
