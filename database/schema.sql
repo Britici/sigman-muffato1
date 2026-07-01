@@ -332,6 +332,12 @@ CREATE INDEX idx_os_criado_em     ON ordens_servico(criado_em);
 -- Múltiplos períodos de atendimento por OS
 -- ============================================================
 
+-- Snapshot de um atendimento parcial. Criado quando o checkbox
+-- "Concluída" (Bloco 5, 2026-07-01) é desmarcado ao atender/concluir:
+-- o intervalo ativo da OS (hora_inicio..foto_url em ordens_servico)
+-- é copiado pra cá, os campos ativos da OS são limpos e o status
+-- volta pra 'aberta' — a OS pode ser retomada depois (Bloco 6,
+-- "Continuar O.S.", ainda não implementado).
 CREATE TABLE os_intervalos (
     id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     os_id               UUID        NOT NULL REFERENCES ordens_servico(id) ON DELETE CASCADE,
@@ -339,8 +345,11 @@ CREATE TABLE os_intervalos (
     manutentor_nome     VARCHAR(120),
     hora_inicio         TIMESTAMPTZ NOT NULL,
     hora_fim            TIMESTAMPTZ,
+    tempo_parada_min    INTEGER,
     tarefas_executadas  TEXT,
-    status              intervalo_status NOT NULL DEFAULT 'em_andamento',
+    acao_preventiva     TEXT,
+    foto_url            TEXT,
+    status              intervalo_status NOT NULL DEFAULT 'concluido',
     criado_em           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
