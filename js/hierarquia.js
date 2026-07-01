@@ -93,3 +93,20 @@ export function salasNoEscopo(u) {
     return u.nivel === 1 ? ids.includes(ambiente.localId) : ids.includes(ambiente.id);
   }).map(s => s.id);
 }
+
+// Todos os Ambientes dentro do escopo do usuário — usado pra
+// restringir o select de Ambiente na árvore da Abertura de OS.
+// Admin / nível 1 (Local) sem mais filtro de Ambiente = sem restrição
+// (null). Nível 3 (Sala) deriva o(s) Ambiente(s) a partir das Salas
+// no seu escopoIds (já que não tem escopo de Ambiente próprio).
+export function ambientesNoEscopo(u) {
+  if (!u) return null;
+  if (u.perfil === 'admin') return null;
+  if (!u.nivel || u.nivel === 1) return null; // sem restrição de Ambiente
+  const db = getDB();
+  if (u.nivel === 2) return u.escopoIds || [];
+  // nivel === 3: ambientes das salas no escopo
+  const salaIds = u.escopoIds || [];
+  const ambIds = db.salas.filter(s => salaIds.includes(s.id)).map(s => s.ambienteId);
+  return [...new Set(ambIds)];
+}
