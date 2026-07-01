@@ -168,7 +168,10 @@
         <div class="card">
           <div class="card-t">Identificação</div>
           <div class="fg-row">
-            <div class="fg"><label>Sala / Local</label><select id="ab-sl"><option value="">Selecione...</option></select></div>
+            <div class="fg"><label>Unidade</label><input type="text" id="ab-unid" disabled></div>
+            <div class="fg"><label>Local</label><input type="text" id="ab-local" disabled></div>
+            <div class="fg"><label>Ambiente</label><select id="ab-amb"><option value="">Selecione...</option></select></div>
+            <div class="fg"><label>Sala</label><select id="ab-sl"><option value="">Selecione o ambiente</option></select></div>
             <div class="fg"><label>Máquina / Ativo</label><select id="ab-mq"><option value="">Selecione a sala</option></select></div>
             <div class="fg"><label>Tipo de Ação</label><select id="ab-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
             <div class="fg"><label>Prioridade</label><select id="ab-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
@@ -495,6 +498,29 @@
   <div class="modal" style="max-width:520px">
     <div class="mhd"><div class="mtit">🗂️ Estrutura Cadastrada</div><button class="mcl" data-close="m-estrutura">×</button></div>
     <div id="estrutura-b"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: IMPORTAR ESTRUTURA EM MASSA ══ -->
+<div class="mb" id="m-importar">
+  <div class="modal" style="max-width:560px">
+    <div class="mhd"><div class="mtit">📥 Importar Estrutura</div><button class="mcl" data-close="m-importar">×</button></div>
+    <div style="font-size:12px;color:var(--txt3);margin-bottom:8px">
+      Cole 1 linha por Sala, no formato <code>Unidade;Local;Ambiente;Sala</code>.
+      O que já existe (por nome) é reaproveitado — só cria o que faltar.
+      Pode colar a mesma lista de novo sem duplicar.
+    </div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:8px">
+      Exemplo:<br>
+      <code>MUFFATO FOODS;CAMBÉ - PR;UTILIDADES;GERADORES</code><br>
+      <code>MUFFATO FOODS;CAMBÉ - PR;UTILIDADES;SUBESTAÇÕES</code>
+    </div>
+    <textarea id="imp-texto" rows="10" style="width:100%;font-family:monospace;font-size:12px" placeholder="MUFFATO FOODS;CAMBÉ - PR;UTILIDADES;GERADORES"></textarea>
+    <div id="imp-resultado" style="margin-top:10px"></div>
+    <div class="fa">
+      <button class="btn btn-gh" data-close="m-importar">Fechar</button>
+      <button class="btn btn-p" id="btn-imp-processar">Processar</button>
+    </div>
   </div>
 </div>
 
