@@ -61,7 +61,7 @@ export function getMockDB() {
       meta_performance:    90,
       meta_qualidade:      99,
       empresa:             'Muffato Foods',
-      unidade:             'Pato Branco - PR',
+      unidade:             'Cambé - PR',
     },
 
     // ── Usuários ─────────────────────────────────────────────
@@ -69,45 +69,42 @@ export function getMockDB() {
     // Cada usuário deve alterar a senha no primeiro acesso; o admin
     // pode redefinir a qualquer momento na tela de Usuários.
     //
-    // lado/nivel/escopoIds (2026-06-27): substitui aprovadoresLocal.
-    //   lado: 'producao' | 'manutencao' | 'ambos' (nível 1 sempre 'ambos'
-    //   — diretoria fica acima das duas hierarquias).
-    //   nivel: 1 Diretoria | 2 Gerência(prod)/Coordenador(manut) |
-    //   3 Coordenação(prod)/Supervisor(manut) | 4 Produção/Manutenção.
-    //   escopoIds: ids de Local (nível 2) ou Ambiente (níveis 3/4) —
-    //   nível 1 ignora (escopo sempre universal). Default abaixo cobre
-    //   o único Local/Ambiente que existe hoje (bootstrap) — quando a
-    //   hierarquia real entrar (pendência 4), reviso escopoIds junto.
-    //   admin/administrativo = nível 1 (ex-"diretoria", ver migração
-    //   de perfis abaixo); pcm = nível 2 manutenção (Coordenador —
-    //   planejamento cobre a manutenção como um todo); manutencao/
-    //   producao = nível 4. Ninguém em nível 3 ainda — Tiago indica
-    //   quem é Coordenação(produção)/Supervisor(manutenção) quando
-    //   existir.
+    // lado/nivel/escopoIds (2026-06-30, Bloco 7): substitui aprovadoresLocal.
+    //   lado: 'producao' | 'manutencao' | 'ambos' (só nível 1 pode ser
+    //   'ambos' — diretoria fica acima das duas hierarquias).
+    //   nivel: 1 Local (Diretoria/Coordenação) | 2 Ambiente (Supervisão)
+    //   | 3 Sala (Produção/Manutenção operacional).
+    //   escopoIds: ids de Local (nível 1), Ambiente (nível 2) ou Sala
+    //   (nível 3, direto — sem herança).
+    //   admin NÃO usa este esquema — lado/nivel null, comando universal
+    //   controlado por perfil via isAdmin() (ver auth.js/hierarquia.js).
+    //   ⚠️ TODO: nível 3 abaixo está com escopoIds = TODAS as salas como
+    //   placeholder (preserva comportamento atual) — Tiago precisa
+    //   revisar e atribuir a(s) sala(s) real(is) de cada pessoa.
     usuarios: [
-      { login:'admin',                nome:'Administrador',          perfil:'admin',          senhaHash:'8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', ativo:true, lado:'ambos',       nivel:1, escopoIds:[] },
-      { login:'amauri',               nome:'Amauri Prymel',          perfil:'pcm',            senhaHash:'9b3dd215dbea2264058ab9802225bec9619a1fff6107f7e4a6d214a85d3bc1a6', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
-      { login:'marcia',               nome:'Marcia Souza',           perfil:'pcm',            senhaHash:'d077e58dee24d6cc828a2b7ba7644912dc991d4f19a1f9b6ec825e45406bbe2f', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
-      { login:'leonardo',             nome:'Leonardo Dias',          perfil:'pcm',            senhaHash:'18ccba186d8757c20cbf05d7a98b2c64f9f16eb64ea4a64659bbc5c9b7b3a7fe', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
-      { login:'larissa',              nome:'Larissa Melo',           perfil:'pcm',            senhaHash:'95a8f6568fa7ad6aba1bdcd6620a471a0aca7d4c447f508a94ae4aab2ed86bd3', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
-      { login:'welington',            nome:'Welington Oliveira',     perfil:'pcm',            senhaHash:'a08172a4e8c58a295ce348a2b6db6f3fa7ea02c243b98f0bcead321c2b444a56', ativo:true, lado:'manutencao',  nivel:2, escopoIds:['LOC_PATO_BRANCO'] },
-      { login:'adilson',              nome:'Adilson Pereira',        perfil:'manutencao',     senhaHash:'56e726b51d77a6a0447646495f5f4cf74f53158516f77a2e3391f97893c3f42c', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'carlos',               nome:'Carlos da Cruz',         perfil:'manutencao',     senhaHash:'7b85175b455060e3237e925f023053ca9515e8682a83c8b09911c724a1f8b75f', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'danilo',               nome:'Danilo Mariano',         perfil:'manutencao',     senhaHash:'da9f6713671da24a575ffbe6f0749ecb613efe7f3887b5c9f3e6cc8a94982ae9', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'joao',                 nome:'João Pereira',           perfil:'manutencao',     senhaHash:'ed2befb11499489e2570cb053f774b8ed93e89eddab3f78867a2a5f32c58845e', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'paulo',                nome:'Paulo do Carmo',         perfil:'manutencao',     senhaHash:'9d87609a3584d3fca24b7084dc445c5b6f5b8ac2c6db3a1fb0d3ab7ffe27e042', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'tiago',                nome:'Tiago Britici',          perfil:'manutencao',     senhaHash:'2c9a1c95814f31bb8459a7f7fc3536e73354699bace060e0876966878e1d1548', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'marcio',               nome:'Marcio Machado',         perfil:'manutencao',     senhaHash:'52667e8b16cdc0747e5c2b6c57328cb2fd11e4fa8b9fd5ae94be6e3d1c71fcc1', ativo:true, lado:'manutencao',  nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'ricardo',              nome:'Ricardo Dias',           perfil:'administrativo', senhaHash:'65304dac3823069673aa9d3b90dcb9f44938e2d12f58509addc915d08922b64b', ativo:true, lado:'ambos',       nivel:1, escopoIds:[] },
-      { login:'angelica',             nome:'Angélica Prymel',        perfil:'administrativo', senhaHash:'1f254faa04cffa0d0a8c75f8514f0087429c37cc3516f7abb69c6660db2e6407', ativo:true, lado:'ambos',       nivel:1, escopoIds:[] },
-      { login:'nadine',               nome:'Nadine da Silva',        perfil:'producao',       senhaHash:'3af8e4b69bdc2acdabfabc682417cc1d53b84d0437aeb3787a054bfc68d9b2d4', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'producao-pas',         nome:'Produção P.A.S.',        perfil:'producao',       senhaHash:'e3bd5c48fe5fe7ef75b759caad8271e312c3e52f25c71419bc79298be39f94cc', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'producao-porcionados', nome:'Produção Porcionados',   perfil:'producao',       senhaHash:'a1c984d35d0aa1e78d56efa183c52f2404a6a7ce476e8c86f1b2296352c1392f', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'producao-desossa',     nome:'Produção Desossa',       perfil:'producao',       senhaHash:'43ea106d1c415f100f93edc27918a3eba54e46138c180c635574a9c12cafae47', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'qualidade',            nome:'Equipe de Qualidade',    perfil:'producao',       senhaHash:'7b670b41f14eba4f70d9b84ea3f78408f3d81090d211fd8add3120af336bad23', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'expedicao',            nome:'Expedição',              perfil:'producao',       senhaHash:'5e143390c11c531f7794a72cae1fdf2b51955bee76c648a4ff6fbc5ad27cef82', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'recebimento',          nome:'Recebimento',            perfil:'producao',       senhaHash:'f6fe6a3e7ce3556c0d7f5bf984597293b39ed672d064c4c86672b70b1e326ee3', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
-      { login:'secundaria',           nome:'Secundária',             perfil:'producao',       senhaHash:'075018006606cc4ed45db6dcc2cdc2ebedc2f6121e809482dc0f7fc5c4a1e90b', ativo:true, lado:'producao',    nivel:4, escopoIds:['AMB_PRODUCAO'] },
+      { login:'admin',                nome:'Administrador',          perfil:'admin',          senhaHash:'8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', ativo:true, lado:null,    nivel:null, escopoIds:[] },
+      { login:'amauri',               nome:'Amauri Prymel',          perfil:'pcm',            senhaHash:'9b3dd215dbea2264058ab9802225bec9619a1fff6107f7e4a6d214a85d3bc1a6', ativo:true, lado:'manutencao', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'marcia',               nome:'Marcia Souza',           perfil:'pcm',            senhaHash:'d077e58dee24d6cc828a2b7ba7644912dc991d4f19a1f9b6ec825e45406bbe2f', ativo:true, lado:'manutencao', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'leonardo',             nome:'Leonardo Dias',          perfil:'pcm',            senhaHash:'18ccba186d8757c20cbf05d7a98b2c64f9f16eb64ea4a64659bbc5c9b7b3a7fe', ativo:true, lado:'manutencao', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'larissa',              nome:'Larissa Melo',           perfil:'pcm',            senhaHash:'95a8f6568fa7ad6aba1bdcd6620a471a0aca7d4c447f508a94ae4aab2ed86bd3', ativo:true, lado:'manutencao', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'welington',            nome:'Welington Oliveira',     perfil:'pcm',            senhaHash:'a08172a4e8c58a295ce348a2b6db6f3fa7ea02c243b98f0bcead321c2b444a56', ativo:true, lado:'manutencao', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'adilson',              nome:'Adilson Pereira',        perfil:'manutencao',     senhaHash:'56e726b51d77a6a0447646495f5f4cf74f53158516f77a2e3391f97893c3f42c', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'carlos',               nome:'Carlos da Cruz',         perfil:'manutencao',     senhaHash:'7b85175b455060e3237e925f023053ca9515e8682a83c8b09911c724a1f8b75f', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'danilo',               nome:'Danilo Mariano',         perfil:'manutencao',     senhaHash:'da9f6713671da24a575ffbe6f0749ecb613efe7f3887b5c9f3e6cc8a94982ae9', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'joao',                 nome:'João Pereira',           perfil:'manutencao',     senhaHash:'ed2befb11499489e2570cb053f774b8ed93e89eddab3f78867a2a5f32c58845e', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'paulo',                nome:'Paulo do Carmo',         perfil:'manutencao',     senhaHash:'9d87609a3584d3fca24b7084dc445c5b6f5b8ac2c6db3a1fb0d3ab7ffe27e042', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'tiago',                nome:'Tiago Britici',          perfil:'manutencao',     senhaHash:'2c9a1c95814f31bb8459a7f7fc3536e73354699bace060e0876966878e1d1548', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'marcio',               nome:'Marcio Machado',         perfil:'manutencao',     senhaHash:'52667e8b16cdc0747e5c2b6c57328cb2fd11e4fa8b9fd5ae94be6e3d1c71fcc1', ativo:true, lado:'manutencao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'ricardo',              nome:'Ricardo Dias',           perfil:'administrativo', senhaHash:'65304dac3823069673aa9d3b90dcb9f44938e2d12f58509addc915d08922b64b', ativo:true, lado:'ambos', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'angelica',             nome:'Angélica Prymel',        perfil:'administrativo', senhaHash:'1f254faa04cffa0d0a8c75f8514f0087429c37cc3516f7abb69c6660db2e6407', ativo:true, lado:'ambos', nivel:1, escopoIds:['LOC_PATO_BRANCO'] },
+      { login:'nadine',               nome:'Nadine da Silva',        perfil:'producao',       senhaHash:'3af8e4b69bdc2acdabfabc682417cc1d53b84d0437aeb3787a054bfc68d9b2d4', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'producao-pas',         nome:'Produção P.A.S.',        perfil:'producao',       senhaHash:'e3bd5c48fe5fe7ef75b759caad8271e312c3e52f25c71419bc79298be39f94cc', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'producao-porcionados', nome:'Produção Porcionados',   perfil:'producao',       senhaHash:'a1c984d35d0aa1e78d56efa183c52f2404a6a7ce476e8c86f1b2296352c1392f', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'producao-desossa',     nome:'Produção Desossa',       perfil:'producao',       senhaHash:'43ea106d1c415f100f93edc27918a3eba54e46138c180c635574a9c12cafae47', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'qualidade',            nome:'Equipe de Qualidade',    perfil:'producao',       senhaHash:'7b670b41f14eba4f70d9b84ea3f78408f3d81090d211fd8add3120af336bad23', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'expedicao',            nome:'Expedição',              perfil:'producao',       senhaHash:'5e143390c11c531f7794a72cae1fdf2b51955bee76c648a4ff6fbc5ad27cef82', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'recebimento',          nome:'Recebimento',            perfil:'producao',       senhaHash:'f6fe6a3e7ce3556c0d7f5bf984597293b39ed672d064c4c86672b70b1e326ee3', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
+      { login:'secundaria',           nome:'Secundária',             perfil:'producao',       senhaHash:'075018006606cc4ed45db6dcc2cdc2ebedc2f6121e809482dc0f7fc5c4a1e90b', ativo:true, lado:'producao', nivel:3, escopoIds:['CÁRNEOS', 'DEFUMADOS', 'LÁCTEOS', 'BACALHAU', 'LINGUIÇAS', 'TEMPERADOS', 'PORCIONAMENTOS', 'CARNE_MOÍDA', 'DESOSSA', 'SALMOURAS', 'PIZZA', 'SECUNDÁRIA', 'EMBALAGEM_SECUNDÁRIA', 'UTILIDADES', 'DATA_CENTER', 'LAVANDERIA', 'EFLUENTE_INDUSTRIAL', 'EXPEDIÇÃO', 'RECEBIMENTO'] },
     ],
 
     // ── Salas ────────────────────────────────────────────────
@@ -121,11 +118,18 @@ export function getMockDB() {
     ],
 
     locais: [
-      { id:'LOC_PATO_BRANCO', unidadeId:'UNI_MUFFATO_PB', nome:'PATO BRANCO - PR', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'LOC_PATO_BRANCO', unidadeId:'UNI_MUFFATO_PB', nome:'CAMBÉ - PR', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
     ],
 
+    // Renomeado de "PRODUÇÃO" pra "FÁBRICA INTERNA" (2026-06-30) — as
+    // 19 salas existentes continuam todas aqui por ora (Tiago revisa
+    // manualmente quais devem migrar pra Utilidades/Externa). Id
+    // mantido (AMB_PRODUCAO) pra não quebrar referência das salas.
     ambientes: [
-      { id:'AMB_PRODUCAO', localId:'LOC_PATO_BRANCO', nome:'PRODUÇÃO', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'AMB_PRODUCAO',         localId:'LOC_PATO_BRANCO', nome:'FÁBRICA INTERNA', ativo:true, criadoEm:'2026-06-23T00:00:00.000Z' },
+      { id:'AMB_UTILIDADES',       localId:'LOC_PATO_BRANCO', nome:'UTILIDADES',      ativo:true, criadoEm:'2026-06-30T00:00:00.000Z' },
+      { id:'AMB_FABRICA_EXTERNA',  localId:'LOC_PATO_BRANCO', nome:'FÁBRICA EXTERNA', ativo:true, criadoEm:'2026-06-30T00:00:00.000Z' },
+      { id:'AMB_AREA_EXTERNA',     localId:'LOC_PATO_BRANCO', nome:'ÁREA EXTERNA',    ativo:true, criadoEm:'2026-06-30T00:00:00.000Z' },
     ],
 
     salas: [
