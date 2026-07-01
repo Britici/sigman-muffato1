@@ -189,11 +189,11 @@
                 </div>
               </div>
             </div>
-            <div class="fg" id="ab-mn-wrap"><label>Manutentor Responsável</label><select id="ab-mn"><option value="">Selecione...</option></select></div>
+            <div class="fg" id="ab-mn-wrap"><label>Manutentor Responsável<span class="locked-tag" id="ab-mn-tag" style="display:none">🔒 Após aprovação</span></label><select id="ab-mn"><option value="">Selecione...</option></select></div>
           </div>
         </div>
         <div class="card" id="card-ab-tempo">
-          <div class="card-t">Tempo de Intervenção</div>
+          <div class="card-t">Tempo de Intervenção<span class="locked-tag" id="ab-tempo-tag" style="display:none">🔒 Preenchido pela Manutenção</span></div>
           <div class="fg-row fg-3">
             <div class="fg"><label>Data</label><input type="date" id="ab-dt"></div>
             <div class="fg"><label>Hora Início</label><input type="time" id="ab-in"></div>
@@ -205,6 +205,7 @@
           <div class="card-t">Descrição</div>
           <div class="fg"><label>Problema / Ocorrência</label><textarea id="ab-pb" placeholder="Descreva o problema..."></textarea></div>
           <div id="ab-bloco-execucao">
+            <div class="card-t" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bord)">Execução<span class="locked-tag" id="ab-exec-tag" style="display:none">🔒 Preenchido pela Manutenção</span></div>
             <div class="fg" style="margin-top:10px"><label>Ação / Serviço Executado</label><textarea id="ab-ac" placeholder="Descreva o serviço..."></textarea></div>
             <div class="fg" style="margin-top:10px">
               <label>Ação Preventiva Identificada</label>
