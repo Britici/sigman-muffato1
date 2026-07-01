@@ -72,6 +72,13 @@ body{font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--txt);
 .psel-item{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;background:transparent;border:none;color:var(--txt);font-family:var(--fb);font-size:13px;text-align:left;cursor:pointer}
 .psel-item:hover{background:var(--surf3)}
 .psel-item+.psel-item{border-top:1px solid var(--bord)}
+
+/* Bloco 4 — card/campo travado pro perfil Produção: mesma disposição
+   de cards que Manutenção vê, só que os campos que Produção não
+   preenche ficam visualmente desabilitados em vez de sumirem. */
+.card-locked{opacity:.5;position:relative}
+.card-locked input,.card-locked select,.card-locked textarea,.card-locked .psel-btn{pointer-events:none;cursor:not-allowed}
+.locked-tag{font-size:11px;font-weight:700;color:var(--txt3);background:var(--surf3);border-radius:20px;padding:2px 9px;margin-left:8px;letter-spacing:.02em}
 input[type=date]::-webkit-calendar-picker-indicator,
 input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.65);cursor:pointer}
 [data-theme=light] input[type=date]::-webkit-calendar-picker-indicator,
