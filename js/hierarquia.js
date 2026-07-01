@@ -1,15 +1,22 @@
 // ============================================================
 // SIGMAN v2.0 — js/hierarquia.js
 // ============================================================
-// Hierarquia organizacional (2026-06-27) — substitui o checkbox
-// manual de aprovadores por Sala (aprovadoresLocal). Aprovação e
-// escopo de pré-preenchimento agora vêm do cargo da pessoa:
-//   nivel 1 Diretoria        (lado 'ambos', escopo universal)
-//   nivel 2 Gerência/Coordenador  (escopo: Local)
-//   nivel 3 Coordenação/Supervisor (escopo: Ambiente)
-//   nivel 4 Produção/Manutenção    (escopo: Ambiente)
-// usuarios[].escopoIds guarda ids de Local (nível 2) ou Ambiente
-// (níveis 3/4) — nível 1 ignora (sempre universal).
+// Hierarquia organizacional (2026-06-30, Bloco 7) — substitui o
+// checkbox manual de aprovadores por Sala (aprovadoresLocal). Admin
+// NÃO entra neste esquema de níveis — comando universal, controlado
+// à parte por isAdmin()/perfil (ver auth.js). Aprovação e escopo de
+// pré-preenchimento dos demais perfis vêm do cargo da pessoa:
+//   nivel 1 Local    — Diretoria + Coordenadores (escopo: Local)
+//   nivel 2 Ambiente — Supervisores               (escopo: Ambiente)
+//   nivel 3 Sala     — Produção/Manutenção (operacional, nunca
+//                       aprova terceiros — só a própria OS, já fixado
+//                       em aprovadorProdLogin na abertura). Escopo:
+//                       Sala diretamente (sem herança automática).
+// usuarios[].escopoIds guarda ids de Local (nível 1), Ambiente
+// (nível 2) ou Sala (nível 3), conforme o nível.
+// ⚠️ TODO (pendência aberta): nível 3 hoje aponta pra todas as Salas
+// existentes como placeholder — Tiago precisa revisar e atribuir as
+// Salas reais de cada manutentor/produção individualmente.
 // ============================================================
 
 import { getDB } from './api.js';
@@ -22,38 +29,39 @@ export function salaIdPorNome(nome) {
   return db.salas.find(s => s.nome === nome)?.id || null;
 }
 
-// O usuário `u` tem escopo sobre a Sala `salaId`?
+// O usuário `u` tem escopo sobre a Sala `salaId`? Admin nunca passa
+// por aqui — sempre verificado à parte via isAdmin() pelo chamador.
 export function escopoContemSala(u, salaId) {
   if (!u || !u.nivel) return false;
-  if (u.nivel === 1) return true; // diretoria — escopo universal
   const db = getDB();
   const sala = db.salas.find(s => s.id === salaId);
   if (!sala) return false;
+  const ids = u.escopoIds || [];
+  if (u.nivel === 3) return ids.includes(sala.id);
   const ambiente = db.ambientes.find(a => a.id === sala.ambienteId);
   if (!ambiente) return false;
-  const ids = u.escopoIds || [];
-  return u.nivel === 2 ? ids.includes(ambiente.localId) : ids.includes(ambiente.id);
+  return u.nivel === 1 ? ids.includes(ambiente.localId) : ids.includes(ambiente.id);
 }
 
 // Elegíveis a aprovar um certo "lado" (produção/manutenção) de uma OS:
-// níveis 1-3 do lado (ou 'ambos') cujo escopo cobre a Sala da OS.
-// Nível 4 nunca entra aqui (só aprova a própria OS — tratado fora,
-// onde o aprovadorProdLogin já foi fixado na abertura). Conflito de
+// níveis 1-2 do lado (ou 'ambos') cujo escopo cobre a Sala da OS, mais
+// admin sempre (comando universal, fora do esquema de níveis). Nível
+// 3 nunca entra aqui (só aprova a própria OS — tratado fora, onde o
+// aprovadorProdLogin já foi fixado na abertura). Conflito de
 // interesse: quem executou o serviço não aprova manutenção da própria
-// OS. Sem ninguém elegível → cai para o admin (caso extremo).
+// OS.
 export function elegiveisAprovacao(o, lado) {
   const db = getDB();
   const salaId = salaIdPorNome(o.sala);
   if (!salaId) return [];
   let logins = [...new Set(
     db.usuarios
-      .filter(u => u.ativo !== false && u.nivel >= 1 && u.nivel <= 3)
-      .filter(u => u.lado === lado || u.lado === 'ambos')
-      .filter(u => escopoContemSala(u, salaId))
+      .filter(u => u.ativo !== false)
+      .filter(u => u.perfil === 'admin' ||
+        (u.nivel >= 1 && u.nivel <= 2 && (u.lado === lado || u.lado === 'ambos') && escopoContemSala(u, salaId)))
       .map(u => u.login)
   )];
   if (lado === 'manutencao') logins = logins.filter(login => login !== o.manutLogin);
-  if (!logins.length) logins = db.usuarios.filter(u => u.perfil === 'admin' && u.ativo !== false).map(u => u.login);
   return logins;
 }
 
@@ -70,14 +78,18 @@ export function elegiveisManut(o) {
 }
 
 // Todas as Salas dentro do escopo do usuário — usado pra restringir o
-// select de Sala na Abertura de OS. Nível 1 = sem restrição (null).
+// select de Sala na Abertura de OS. Admin/nível 1 sem nível = sem
+// restrição (null). Nível 1 tem escopo de Local (não mais universal).
 export function salasNoEscopo(u) {
-  if (!u || !u.nivel || u.nivel === 1) return null; // null = sem restrição
+  if (!u) return null;
+  if (u.perfil === 'admin') return null; // comando universal
+  if (!u.nivel) return null;
   const db = getDB();
   const ids = u.escopoIds || [];
+  if (u.nivel === 3) return ids; // escopo já é direto em Salas
   return db.salas.filter(s => {
     const ambiente = db.ambientes.find(a => a.id === s.ambienteId);
     if (!ambiente) return false;
-    return u.nivel === 2 ? ids.includes(ambiente.localId) : ids.includes(ambiente.id);
+    return u.nivel === 1 ? ids.includes(ambiente.localId) : ids.includes(ambiente.id);
   }).map(s => s.id);
 }
