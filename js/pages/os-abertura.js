@@ -89,14 +89,31 @@ function _setPrioridade(val) {
 
 // Esconde os campos que só fazem sentido pra quem já atendeu no ato
 // (produção normalmente abre e some — não tem como preencher isso).
+// Bloco 4 (2026-06-30): antes escondia o card Tempo de Intervenção e o
+// bloco de Execução inteiros pra Produção (display:none) — layout
+// ficava visualmente diferente entre os 2 perfis. Agora os 2 sempre
+// veem os mesmos cards, na mesma ordem; pra Produção, os campos que
+// ela não preenche ficam travados (opacidade + pointer-events:none +
+// disabled), com uma tag "🔒 Preenchido pela Manutenção". _salvar()
+// já ignora esses valores pra Produção independente do que estiver
+// no DOM (força '' / 0), então travar em vez de esconder não muda o
+// dado salvo — só a experiência visual.
 function _toggleCamposPorPerfil() {
   const ehProducao = CU?.perfil === 'producao';
-  const tempo  = document.getElementById('card-ab-tempo');
-  const exec   = document.getElementById('ab-bloco-execucao');
-  const mnWrap = document.getElementById('ab-mn-wrap');
-  if (tempo)  tempo.style.display  = ehProducao ? 'none' : '';
-  if (exec)   exec.style.display   = ehProducao ? 'none' : '';
-  if (mnWrap) mnWrap.style.display = ehProducao ? 'none' : '';
+  const tempoCard = document.getElementById('card-ab-tempo');
+  const execBloco = document.getElementById('ab-bloco-execucao');
+  const mnWrap    = document.getElementById('ab-mn-wrap');
+
+  tempoCard?.classList.toggle('card-locked', ehProducao);
+  execBloco?.classList.toggle('card-locked', ehProducao);
+  document.getElementById('ab-tempo-tag')?.style.setProperty('display', ehProducao ? '' : 'none');
+  document.getElementById('ab-exec-tag')?.style.setProperty('display', ehProducao ? '' : 'none');
+  document.getElementById('ab-mn-tag')?.style.setProperty('display', ehProducao ? '' : 'none');
+
+  [tempoCard, execBloco, mnWrap].forEach(el => {
+    el?.querySelectorAll('input,select,textarea').forEach(f => { f.disabled = ehProducao; });
+  });
+  if (mnWrap) mnWrap.classList.toggle('card-locked', ehProducao);
 }
 
 // Unidade/Local: hoje só existe 1 de cada (bootstrap) — mostrados
