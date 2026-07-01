@@ -121,6 +121,7 @@ export function render() {
 
   _bindDropdownNovo();
   _bindEstrutura();
+  _bindImportar();
   _bindFiltroSelects();
   _bindColFiltrosTexto();
   _bindSortHeaders();
@@ -396,6 +397,7 @@ function _chartCardHtml(db) {
       </div>
       <div class="chart-row-actions">
         <button class="btn btn-gh btn-sm" id="btn-estrutura" type="button">🗂️ Estrutura</button>
+        <button class="btn btn-gh btn-sm" id="btn-importar" type="button">📥 Importar Estrutura</button>
         <div class="dd" id="dd-novo">
           <button class="btn btn-p btn-sm" id="btn-dd-novo" type="button">+ Adicionar ▾</button>
           <div class="dd-menu">
@@ -548,6 +550,91 @@ function _renderEstrutura() {
       _openForm('sala', leaf.dataset.sala);
     });
   });
+}
+
+// ============================================================
+// IMPORTAÇÃO EM MASSA — cola lista de texto, 1 linha por Sala:
+//   Unidade;Local;Ambiente;Sala
+// Localiza por nome (case/acento-insensitive) o que já existe em
+// cada nível e só cria o que faltar — idempotente, pode colar a
+// mesma lista de novo sem duplicar. Não mexe em Máquinas (Bloco
+// fora de escopo aqui — isso é só estrutura).
+// ============================================================
+function _bindImportar() {
+  document.getElementById('btn-importar')?.addEventListener('click', () => {
+    const ta = document.getElementById('imp-texto');
+    const res = document.getElementById('imp-resultado');
+    if (ta) ta.value = '';
+    if (res) res.innerHTML = '';
+    openM('m-importar');
+  });
+  document.getElementById('btn-imp-processar')?.addEventListener('click', _processarImportar);
+}
+
+function _findOrCreate(db, arr, prefix, parentKey, parentId, nome) {
+  const nomeN = _normNome(nome);
+  if (!nomeN) return null;
+  let item = arr.find(x => (parentKey === null || x[parentKey] === parentId) && _normNome(x.nome) === nomeN);
+  if (item) return { item, criado: false };
+  item = parentKey === null
+    ? { id: _genId(prefix, nome), nome: nomeN, ativo: true, criadoEm: new Date().toISOString() }
+    : { id: _genId(prefix, nome), [parentKey]: parentId, nome: nomeN, ativo: true, criadoEm: new Date().toISOString() };
+  arr.push(item);
+  return { item, criado: true };
+}
+
+function _processarImportar() {
+  const db = getDB();
+  const texto = document.getElementById('imp-texto')?.value || '';
+  const res = document.getElementById('imp-resultado');
+  const linhas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+
+  if (!linhas.length) {
+    if (res) res.innerHTML = '<div class="alert er show" style="display:block">Cole ao menos 1 linha no formato Unidade;Local;Ambiente;Sala.</div>';
+    return;
+  }
+
+  let criadosUni = 0, criadosLoc = 0, criadosAmb = 0, criadosSala = 0, jaExistiam = 0;
+  const erros = [];
+
+  linhas.forEach((linha, i) => {
+    const partes = linha.split(';').map(p => p.trim());
+    if (partes.length !== 4 || partes.some(p => !p)) {
+      erros.push(`Linha ${i + 1}: esperado 4 campos (Unidade;Local;Ambiente;Sala), recebido "${linha}".`);
+      return;
+    }
+    const [nomeUni, nomeLoc, nomeAmb, nomeSala] = partes;
+
+    const ru = _findOrCreate(db, db.unidades, 'UNI', null, null, nomeUni);
+    if (ru.criado) criadosUni++;
+    const uId = ru.item.id;
+
+    const rl = _findOrCreate(db, db.locais, 'LOC', 'unidadeId', uId, nomeLoc);
+    if (rl.criado) criadosLoc++;
+    const lId = rl.item.id;
+
+    const ra = _findOrCreate(db, db.ambientes, 'AMB', 'localId', lId, nomeAmb);
+    if (ra.criado) criadosAmb++;
+    const aId = ra.item.id;
+
+    const rs = _findOrCreate(db, db.salas, 'SAL', 'ambienteId', aId, nomeSala);
+    if (rs.criado) criadosSala++; else jaExistiam++;
+  });
+
+  saveDB();
+
+  const totalCriados = criadosUni + criadosLoc + criadosAmb + criadosSala;
+  if (res) {
+    res.innerHTML = `
+      <div class="alert ${erros.length ? 'er' : 'ok'} show" style="display:block">
+        ✅ ${totalCriados} item(ns) novo(s) criado(s)
+        (${criadosUni} Unidade, ${criadosLoc} Local, ${criadosAmb} Ambiente, ${criadosSala} Sala).
+        ${jaExistiam} sala(s) já existiam e foram ignoradas.
+        ${erros.length ? `<br><br>⚠️ ${erros.length} linha(s) com erro:<br>${erros.join('<br>')}` : ''}
+      </div>`;
+  }
+  showToast(`Importação concluída: ${totalCriados} item(ns) novo(s).`, erros.length ? 'er' : 'ok');
+  if (!erros.length) render(); // só re-renderiza a tabela de fato se não há nada pendente de correção
 }
 
 function _bindGlobalOnce() {

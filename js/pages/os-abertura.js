@@ -18,14 +18,17 @@
 import { getDB, saveDB, apiPost, _genOS } from '../api.js';
 import { CU } from '../auth.js';
 import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js';
-import { salasNoEscopo } from '../hierarquia.js';
+import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js';
 
 let _fotoDataUrl = null;
 
 export function init() {
+  _populateUnidadeLocal();
+  _populateAmbientes();
   _populateSalas();
   _populateManutentores();
   _toggleCamposPorPerfil();
+  document.getElementById('ab-amb')?.addEventListener('change', _populateSalas);
   document.getElementById('ab-sl')?.addEventListener('change', _populateMaquinas);
   document.getElementById('btn-ab-clear')?.addEventListener('click', _limpar);
   document.getElementById('btn-ab-save')?.addEventListener('click', _salvar);
@@ -47,18 +50,50 @@ function _toggleCamposPorPerfil() {
   if (mnWrap) mnWrap.style.display = ehProducao ? 'none' : '';
 }
 
+// Unidade/Local: hoje só existe 1 de cada (bootstrap) — mostrados
+// fixos/read-only. ⚠️ TODO: quando existirem múltiplas Unidades/Locais
+// reais, trocar por select dependente do escopo do usuário (igual
+// Ambiente/Sala abaixo), em vez de pegar sempre o [0].
+function _populateUnidadeLocal() {
+  const db = getDB();
+  const unidade = db.unidades[0];
+  const local = db.locais[0];
+  sv('ab-unid', unidade?.nome || '');
+  sv('ab-local', local?.nome || '');
+}
+
+function _populateAmbientes() {
+  const db  = getDB();
+  const sel = document.getElementById('ab-amb');
+  if (!sel) return;
+  const cur = sel.value;
+  const escopo = ambientesNoEscopo(CU); // null = sem restrição
+  const ambientes = (db.ambientes || [])
+    .filter(a => a.ativo !== false && (escopo === null || escopo.includes(a.id)))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  sel.innerHTML = '<option value="">Selecione...</option>' +
+    ambientes.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+  // Pré-preenche automaticamente quando o usuário só tem 1 Ambiente
+  // no escopo (caso comum: supervisor/manutentor de Ambiente único).
+  if (cur) sel.value = cur;
+  else if (ambientes.length === 1) sel.value = ambientes[0].id;
+}
+
 function _populateSalas() {
   const db  = getDB();
   const sel = document.getElementById('ab-sl');
   if (!sel) return;
   const cur = sel.value;
-  const escopo = salasNoEscopo(CU); // null = sem restrição (nível 1)
+  const ambienteId = v('ab-amb');
+  if (!ambienteId) { sel.innerHTML = '<option value="">Selecione o ambiente</option>'; _populateMaquinas(); return; }
+  const escopo = salasNoEscopo(CU); // null = sem restrição (admin / nível 1)
   const salas = (db.salas || [])
-    .filter(s => s.ativo !== false && (escopo === null || escopo.includes(s.id)))
+    .filter(s => s.ativo !== false && s.ambienteId === ambienteId && (escopo === null || escopo.includes(s.id)))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   sel.innerHTML = '<option value="">Selecione...</option>' +
     salas.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
   if (cur) sel.value = cur;
+  _populateMaquinas();
 }
 
 function _populateMaquinas() {
@@ -91,8 +126,10 @@ function _populateManutentores() {
 
 function _limpar() {
   ['ab-tp', 'ab-pr', 'ab-pb', 'ab-ac', 'ab-ap', 'ab-in', 'ab-fm', 'ab-parada'].forEach(id => sv(id, ''));
+  sv('ab-amb', '');
+  _populateAmbientes(); // repopula e re-aplica pré-seleção (Ambiente único no escopo)
   sv('ab-sl', '');
-  document.getElementById('ab-mq').innerHTML = '<option value="">Selecione a sala</option>';
+  _populateSalas();
   sv('ab-dt', today());
   sv('ab-mn', CU?.perfil !== 'producao' ? (CU?.login || '') : '');
   _fotoDataUrl = null;
