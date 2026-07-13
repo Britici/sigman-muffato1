@@ -199,6 +199,8 @@ function _limpar() {
   _populateSalas();
   sv('ab-dt', today());
   sv('ab-mn', CU?.perfil !== 'producao' ? (CU?.login || '') : '');
+  const cbConcluida = document.getElementById('ab-concluida');
+  if (cbConcluida) cbConcluida.checked = true;
   _fotoDataUrl = null;
   const prev = document.getElementById('ab-photo-preview');
   if (prev) prev.innerHTML = '<span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto</span>';
@@ -236,8 +238,32 @@ async function _salvar() {
     if (!paradaMin) paradaMin = durMin;
   }
 
+  // Checkbox "Concluída" — só faz sentido pra quem preenche execução
+  // no ato (Produção nunca preenche, então pra ela é sempre "aberta",
+  // igual já era antes desta feature). Desmarcada = o que já foi feito
+  // agora vira o 1º registro de historico_intervalos[] (mesmo padrão
+  // do Bloco 5 em O.S. Executadas), campos ativos nascem limpos, OS
+  // nasce direto em "aberta" — some da lista de "Atender" só depois
+  // de concluída de fato.
+  const concluida = ehProducao ? true : (document.getElementById('ab-concluida')?.checked !== false);
+  const acaoPrevRaw = ehProducao ? '' : v('ab-ap').trim();
+  const fotoRaw = ehProducao ? '' : (_fotoDataUrl || '');
+  const temIntervaloPreenchido = !ehProducao && (ini || fim || acaoExec || paradaMin || fotoRaw);
+
   const numero = _genOS();
   const agora  = new Date().toISOString();
+  const historicoInicial = (!ehProducao && !concluida && temIntervaloPreenchido) ? [{
+    manut: manutUser?.nome || manutLogin, manutLogin,
+    ini, fim, durMin, paradaMin, acao: acaoExec, acaoPrev: acaoPrevRaw, fotoUrl: fotoRaw,
+    registradoEm: agora,
+  }] : [];
+  // Campos ativos: se ficou "não concluída" e o que foi digitado virou
+  // histórico acima, a OS nasce com os 7 campos ativos zerados (igual
+  // ao padrão de _registrarIntervaloParcial em os-executadas.js).
+  const camposAtivos = (!ehProducao && !concluida)
+    ? { ini: '', fim: '', durMin: 0, paradaMin: 0, acao: '', acaoPrev: '', fotoUrl: '' }
+    : { ini, fim, durMin, paradaMin, acao: ehProducao ? '' : acaoExec, acaoPrev: acaoPrevRaw, fotoUrl: fotoRaw };
+
   const os = {
     id: crypto.randomUUID(), numero,
     data: v('ab-dt') || today(),
@@ -246,14 +272,12 @@ async function _salvar() {
     prob: problema,
     manut: ehProducao ? '' : (manutUser?.nome || manutLogin),
     manutLogin: ehProducao ? '' : manutLogin,
-    ini, fim, durMin, paradaMin,
-    acao: ehProducao ? '' : acaoExec,
-    acaoPrev: ehProducao ? '' : v('ab-ap').trim(),
-    fotoUrl: ehProducao ? '' : (_fotoDataUrl || ''),
+    ...camposAtivos,
+    historico_intervalos: historicoInicial,
     pecas: '', origem: 'direta', ref: '', criadoEm: agora,
     // ── Solicitante / fluxo de aprovação ──────────────────────
     solicitante: CU?.nome || '', solicitanteLogin: CU?.login || '',
-    status: ehProducao ? 'aberta' : 'aguardando_aprovacao',
+    status: ehProducao ? 'aberta' : (concluida ? 'aguardando_aprovacao' : 'aberta'),
     // Aprovação de produção: só se aplica quando quem abriu É produção
     // (ela mesma aprova depois) — decisão tomada no brainstorm: quando
     // manutenção/PCM/admin abre a própria OS, fica dispensada (null).
@@ -268,7 +292,10 @@ async function _salvar() {
 
   showAlert('al-ab', ehProducao
     ? `${numero} registrada — aguardando atendimento da manutenção.`
-    : `${numero} registrada — aguardando aprovação.`, 'ok');
+    : (concluida
+        ? `${numero} registrada — aguardando aprovação.`
+        : `${numero} registrada — ainda não concluída, aparece em O.S. Executadas pra continuar.`),
+    'ok');
   showToast(`${numero} registrada.`, 'ok');
   _limpar();
 
@@ -279,9 +306,19 @@ async function _salvar() {
       Tipo: tipo, Prioridade: prioridade, Manutentor: os.manut,
       Hora_Inicio: os.ini, Hora_Fim: os.fim, Duracao_Min: os.durMin,
       Tempo_Parada_Min: os.paradaMin, Problema: problema, Acao_Executada: os.acao,
-      Origem: 'direta', Criado_Em: agora,
+      Status: os.status, Origem: 'direta', Criado_Em: agora,
     },
   });
+  if (historicoInicial.length) {
+    apiPost({
+      action: 'append', sheet: 'os_intervalos',
+      row: {
+        OS_Numero: numero, Manutentor: historicoInicial[0].manut,
+        Hora_Inicio: ini, Hora_Fim: fim, Duracao_Min: durMin, Tempo_Parada_Min: paradaMin,
+        Tarefas_Executadas: acaoExec, Registrado_Em: agora,
+      },
+    });
+  }
 }
 
 function _logEdit(acao, numero, detalhe) {

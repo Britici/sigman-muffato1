@@ -4,7 +4,7 @@
 
 import { getDB, saveDB, apiPost } from '../api.js';
 import { CU, updOSHoje } from '../auth.js';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js';
 import { elegiveisProd, elegiveisManut } from '../hierarquia.js';
 
 let _sort = { col:'numero', dir:'desc' };
@@ -18,6 +18,7 @@ let _concluirId = null, _concluirTipo = null;
 // por clique (apiPost/historico duplicados). Encontrado e corrigido
 // em 2026-07-01, antes do Bloco 5.
 let _bound = false;
+let _fotoDataUrl = null; // foto anexada no modal de Atender/Concluir (Bloco 5.1)
 
 export function init() {
   _populateFiltros();
@@ -32,6 +33,9 @@ export function init() {
     document.getElementById('md-rac-btn')?.addEventListener('click', () => { if(_curOS) abrirRAC(_curOS); });
     document.getElementById('btn-concluir')?.addEventListener('click', _concluir);
     document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
+    setupPhotoPreview('mc-photo-input', 'mc-photo-preview', (b64, file) => {
+      _fotoDataUrl = `data:${file.type};base64,${b64}`;
+    });
   }
   render();
 }
@@ -186,9 +190,10 @@ export function verDet(numero) {
 // aponta pro botão Atender.
 function _blocoConcluidaDet(o) {
   const hist = o.historico_intervalos || [];
+  const histThumbs = _thumbsHistorico(hist);
   if (o.status === 'aberta') {
     if (!hist.length) return '';
-    return `<div class="dr"><span class="dl">Histórico</span><span class="dv" style="color:var(--txt3)">${hist.length} intervalo(s) anterior(es) — use "▶ Atender" pra continuar</span></div>`;
+    return `<div class="dr" style="flex-direction:column;gap:8px"><span class="dl">Histórico</span><span class="dv" style="color:var(--txt3)">${hist.length} intervalo(s) anterior(es) — use "▶ Atender" pra continuar</span>${histThumbs}</div>`;
   }
   if (o.status !== 'aguardando_aprovacao' && o.status !== 'concluida') return '';
   const histTag = hist.length ? ` <span style="color:var(--txt3);font-weight:400">(+${hist.length} intervalo(s) anterior(es))</span>` : '';
@@ -197,7 +202,22 @@ function _blocoConcluidaDet(o) {
       <input type="checkbox" id="det-concluida" checked style="width:16px;height:16px;margin:0"
         onchange="window._toggleConcluidaDet('${o.numero}', this.checked)">
       <label for="det-concluida" style="margin:0;font-weight:600;cursor:pointer">Concluída${histTag}</label>
-    </div>`;
+    </div>
+    ${histThumbs}`;
+}
+
+// Miniaturas (120x120, mesma classe .photo-thumb do upload) das fotos
+// dos intervalos anteriores — antes só a contagem aparecia, a foto de
+// cada atendimento parcial nunca era mostrada em lugar nenhum.
+function _thumbsHistorico(hist) {
+  const comFoto = hist.filter(h => h.fotoUrl);
+  if (!comFoto.length) return '';
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+    ${comFoto.map((h,i) => `
+      <a href="${h.fotoUrl}" target="_blank" title="${h.manut||''} · ${h.ini||'?'}–${h.fim||'?'} · ${fd(h.registradoEm)}">
+        <img src="${h.fotoUrl}" class="photo-thumb" alt="Foto intervalo ${i+1}">
+      </a>`).join('')}
+  </div>`;
 }
 
 // Desmarcar aqui = mesma ação do checkbox no modal de Atender, mas a
@@ -304,6 +324,11 @@ export function abrirConcluir(id, tipo) {
   ['mc-in','mc-fm','mc-ds','mc-parada'].forEach(id=>sv(id,''));
   const cb = document.getElementById('mc-concluida');
   if (cb) cb.checked = true; // padrão: marcada (fluxo normal, igual antes do Bloco 5)
+  _fotoDataUrl = null;
+  const prev = document.getElementById('mc-photo-preview');
+  if (prev) prev.innerHTML = '<span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto</span>';
+  const inputFoto = document.getElementById('mc-photo-input');
+  if (inputFoto) inputFoto.value = '';
   openM('m-con');
 }
 
@@ -342,7 +367,7 @@ async function _concluir() {
       // implementado). manut/manutLogin ficam (útil como sugestão de
       // quem continua) — só os 7 campos de intervalo são limpos, igual
       // à regra combinada.
-      _registrarIntervaloParcial(o, {manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,agora});
+      _registrarIntervaloParcial(o, {manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,fotoUrl:_fotoDataUrl||'',agora});
       saveDB(); closeM('m-con');
       render(); updOSHoje();
       showToast(`${o.numero} — intervalo registrado, OS continua aberta.`,'ok');
@@ -352,12 +377,12 @@ async function _concluir() {
     // Atender uma OS aberta por produção: atualiza o mesmo registro,
     // não cria uma nova OS. aprovadorProdLogin já foi definido na
     // abertura (quem relatou o problema) — mantém.
-    Object.assign(o,{manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,status:'aguardando_aprovacao'});
+    Object.assign(o,{manut,manutLogin,ini,fim,durMin,paradaMin,acao:desc,fotoUrl:_fotoDataUrl||'',status:'aguardando_aprovacao'});
     saveDB(); closeM('m-con');
     _logEdit('Atendeu OS',o.numero,`${o.sala} · ${o.maq}`);
     render(); updOSHoje();
     showToast(`${o.numero} atendida — aguardando aprovação.`,'ok');
-    apiPost({action:'update',sheet:'ordens',id:o.numero,idCol:'OS_Numero',row:{Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Acao_Executada:desc}});
+    apiPost({action:'update',sheet:'ordens',id:o.numero,idCol:'OS_Numero',row:{Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Acao_Executada:desc,Foto_Url:_fotoDataUrl||''}});
     return;
   }
 
@@ -385,7 +410,7 @@ async function _concluir() {
   const numero=_genOS();
   const os={
     id:crypto.randomUUID(),numero,sala:item.sala,maq:item.maq,tipo:item.tipo,prioridade:item.prioridade,
-    manut,manutLogin,data:data||today(),ini,fim,durMin,paradaMin,prob:item.descricao||'',acao:desc,
+    manut,manutLogin,data:data||today(),ini,fim,durMin,paradaMin,prob:item.descricao||'',acao:desc,fotoUrl:_fotoDataUrl||'',
     criadoEm:agora,origem:_concluirTipo,origemNum:item.numero,
     status:'aguardando_aprovacao',
     // Planejada não tem solicitante de produção → aprovação de
@@ -400,7 +425,7 @@ async function _concluir() {
   render(); updOSHoje();
   showToast(`${item.numero} concluída → ${numero} registrada.`,'ok');
   apiPost({action:'update',sheet:'planejadas',id:item.numero,idCol:'PL_Numero',row:{Status:'Concluída',Manutentor_Exec:manut,Data_Execucao:data,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Servico_Executado:desc,Concluido_Em:agora}});
-  apiPost({action:'append',sheet:'ordens',row:{OS_Numero:numero,Data:data||today(),Sala:item.sala,Maquina:item.maq,Tipo:item.tipo,Prioridade:item.prioridade,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Problema:item.descricao||'',Acao_Executada:desc,Origem:_concluirTipo,OS_Origem_Ref:item.numero,Criado_Em:agora}});
+  apiPost({action:'append',sheet:'ordens',row:{OS_Numero:numero,Data:data||today(),Sala:item.sala,Maquina:item.maq,Tipo:item.tipo,Prioridade:item.prioridade,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Problema:item.descricao||'',Acao_Executada:desc,Foto_Url:_fotoDataUrl||'',Origem:_concluirTipo,OS_Origem_Ref:item.numero,Criado_Em:agora}});
 }
 
 // Bloco 5 — move o intervalo ativo (o que acabou de ser preenchido no
@@ -408,11 +433,11 @@ async function _concluir() {
 // aprovacao') pro histórico e limpa os campos ativos, deixando a OS
 // pronta pra ser retomada. Reaproveitada tanto pelo modal de Atender
 // quanto pelo checkbox no detalhe (m-det).
-function _registrarIntervaloParcial(o, {manut, manutLogin, ini, fim, durMin, paradaMin, acao, agora}) {
+function _registrarIntervaloParcial(o, {manut, manutLogin, ini, fim, durMin, paradaMin, acao, fotoUrl, agora}) {
   o.historico_intervalos = o.historico_intervalos || [];
   o.historico_intervalos.push({
     manut, manutLogin, ini, fim, durMin, paradaMin,
-    acao: acao || '', acaoPrev: o.acaoPrev || '', fotoUrl: o.fotoUrl || '',
+    acao: acao || '', acaoPrev: o.acaoPrev || '', fotoUrl: fotoUrl || o.fotoUrl || '',
     registradoEm: agora,
   });
   // Campos ativos limpos (regra combinada: só estes 7, manut/manutLogin
@@ -421,7 +446,7 @@ function _registrarIntervaloParcial(o, {manut, manutLogin, ini, fim, durMin, par
     aprovadoProdEm:'', aprovadoManutEm:''}); // reabrir exige nova aprovação quando o trabalho for retomado
   _logEdit('Registrou intervalo (não concluída)', o.numero, `${o.sala} · ${o.maq}`);
   apiPost({action:'update',sheet:'ordens',id:o.numero,idCol:'OS_Numero',row:{Status:'aberta',Hora_Inicio:'',Hora_Fim:'',Duracao_Min:0,Tempo_Parada_Min:0,Acao_Executada:''}});
-  apiPost({action:'append',sheet:'os_intervalos',row:{OS_Numero:o.numero,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Tarefas_Executadas:acao,Registrado_Em:agora}});
+  apiPost({action:'append',sheet:'os_intervalos',row:{OS_Numero:o.numero,Manutentor:manut,Hora_Inicio:ini,Hora_Fim:fim,Duracao_Min:durMin,Tempo_Parada_Min:paradaMin,Tarefas_Executadas:acao,Foto_Url:fotoUrl||'',Registrado_Em:agora}});
 }
 
 export function abrirRAC(os) {
