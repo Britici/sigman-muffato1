@@ -86,22 +86,68 @@ export function genNumero(prefix, contador, existentes) {
 export function setupPhotoPreview(inputId, previewId, onReady) {
   const input = document.getElementById(inputId);
   if (!input) return;
+  // ⚠️ BUG encontrado na sessão anterior (2026-07-01) e corrigido agora:
+  // a zona visível (.photo-zone, pai do input) nunca tinha um listener
+  // de clique que chamasse input.click() — só o <input> escondido
+  // reagia a 'change'. Clicar em "📷 Clique para anexar foto" não
+  // abria o seletor de arquivo nenhuma vez. A zona pode conter outros
+  // elementos (preview/imagem já escolhida) — o clique precisa
+  // funcionar em qualquer ponto dela, não só numa área vazia.
+  const zone = input.closest('.photo-zone') || input.parentElement;
+  if (zone && !zone.dataset.photoZoneBound) {
+    zone.dataset.photoZoneBound = '1'; // evita duplo bind se setupPhotoPreview for chamada 2x pro mesmo input
+    zone.addEventListener('click', () => input.click());
+  }
   input.addEventListener('change', () => {
     const file = input.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { showToast('Foto maior que 5MB.','er'); input.value=''; return; }
     const reader = new FileReader();
     reader.onload = e => {
-      const b64 = e.target.result.split(',')[1];
-      const prev = document.getElementById(previewId);
-      if (prev) prev.innerHTML = `
-        <img src="${e.target.result}" class="photo-thumb" alt="Foto">
-        <div style="font-size:12px;color:var(--txt2)">
-          <strong>${file.name}</strong><br>
-          <span style="color:var(--txt3)">${(file.size/1024).toFixed(0)} KB</span>
-        </div>`;
-      if (onReady) onReady(b64, file);
+      _resizeImage(e.target.result, 1900, 1080).then(({dataUrl, b64, w, h}) => {
+        const prev = document.getElementById(previewId);
+        if (prev) prev.innerHTML = `
+          <img src="${dataUrl}" class="photo-thumb" alt="Foto">
+          <div style="font-size:12px;color:var(--txt2)">
+            <strong>${file.name}</strong><br>
+            <span style="color:var(--txt3)">${w}×${h}px</span>
+          </div>`;
+        // onReady recebe o b64 já reduzido, não o arquivo original —
+        // é isso que vai pra fotoUrl (data:...;base64,${b64}).
+        if (onReady) onReady(b64, file);
+      }).catch(() => {
+        showToast('Não foi possível processar a foto.', 'er');
+        input.value = '';
+      });
     };
     reader.readAsDataURL(file);
+  });
+}
+
+// Reduz a imagem pra caber em maxW×maxH (mantém proporção, nunca
+// amplia foto menor). Reencoda sempre em JPEG 0.85 — o que entra pela
+// câmera de celular hoje em dia costuma vir em 3000px+/HEIC, e como
+// fotoUrl vira base64 dentro do localStorage (ver pendência crítica
+// no contexto do projeto), cada foto sem redução pesa MB e estoura a
+// cota do navegador rápido com poucas OS. 1900x1080 é resolução Full
+// HD+ — sobra nitidez pra olhar detalhe de peça/painel, sem inflar o
+// storage.
+function _resizeImage(dataUrl, maxW, maxH) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width: w, height: h } = img;
+      const scale = Math.min(1, maxW / w, maxH / h); // nunca amplia (scale > 1 vira 1)
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const outDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      resolve({ dataUrl: outDataUrl, b64: outDataUrl.split(',')[1], w, h });
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
   });
 }
