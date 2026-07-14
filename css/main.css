@@ -84,8 +84,8 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.65
 [data-theme=light] input[type=date]::-webkit-calendar-picker-indicator,
 [data-theme=light] input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.15) opacity(.65)}
 
-.chk-quad{appearance:none;-webkit-appearance:none;width:18px;height:18px;min-width:18px;
-  margin:0;border:2px solid var(--bord2);border-radius:4px;background:var(--inp);
+.chk-quad{appearance:none;-webkit-appearance:none;width:18px !important;height:18px !important;min-width:18px;
+  margin:0 !important;padding:0 !important;border:2px solid var(--bord2);border-radius:4px;background:var(--inp);
   cursor:pointer;position:relative;flex-shrink:0}
 .chk-quad:checked{background:var(--red);border-color:var(--red)}
 .chk-quad:checked::after{content:'✕';position:absolute;top:50%;left:50%;
