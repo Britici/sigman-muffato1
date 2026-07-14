@@ -199,7 +199,7 @@ function _blocoConcluidaDet(o) {
   const histTag = hist.length ? ` <span style="color:var(--txt3);font-weight:400">(+${hist.length} intervalo(s) anterior(es))</span>` : '';
   return `
     <div class="dr" style="align-items:center;gap:8px">
-      <input type="checkbox" id="det-concluida" checked style="width:16px;height:16px;margin:0"
+      <input type="checkbox" id="det-concluida" checked class="chk-quad"
         onchange="window._toggleConcluidaDet('${o.numero}', this.checked)">
       <label for="det-concluida" style="margin:0;font-weight:600;cursor:pointer">Concluída${histTag}</label>
     </div>
