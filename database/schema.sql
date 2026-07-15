@@ -290,7 +290,8 @@ CREATE TABLE ordens_servico (
     problema                TEXT        NOT NULL,
     acao_executada          TEXT,
     acao_preventiva         TEXT,
-    foto_url                TEXT,
+    foto_url                TEXT,       -- compatibilidade: sempre = fotos[0] quando fotos não vazio
+    fotos                   JSONB       DEFAULT '[]'::jsonb, -- array de data URLs/URLs (múltiplas fotos, Bloco 5.1+)
     pecas_utilizadas        TEXT,
     -- Origem / rastreabilidade
     origem                  os_origem   NOT NULL DEFAULT 'direta',
@@ -348,7 +349,8 @@ CREATE TABLE os_intervalos (
     tempo_parada_min    INTEGER,
     tarefas_executadas  TEXT,
     acao_preventiva     TEXT,
-    foto_url            TEXT,
+    foto_url            TEXT,       -- compatibilidade: sempre = fotos[0] quando fotos não vazio
+    fotos               JSONB       DEFAULT '[]'::jsonb, -- array de data URLs/URLs (múltiplas fotos, Bloco 5.1+)
     status              intervalo_status NOT NULL DEFAULT 'concluido',
     criado_em           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
