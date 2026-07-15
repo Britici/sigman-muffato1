@@ -82,46 +82,77 @@ export function genNumero(prefix, contador, existentes) {
   return `${prefix}-${String(c).padStart(4,'0')}`;
 }
 
-// ── Foto preview ──────────────────────────────────────────────
+// ── Foto preview (múltiplas fotos) ──────────────────────────────
+// onReady(dataUrls, fotos) é chamado a cada mudança (add ou remove)
+// com o estado atual completo — dataUrls: array de "data:...;base64,..."
+// já redimensionadas; fotos: array de {dataUrl, name, w, h}.
 export function setupPhotoPreview(inputId, previewId, onReady) {
   const input = document.getElementById(inputId);
   if (!input) return;
-  // ⚠️ BUG encontrado na sessão anterior (2026-07-01) e corrigido agora:
+  // ⚠️ BUG encontrado na sessão anterior (2026-07-01) e corrigido:
   // a zona visível (.photo-zone, pai do input) nunca tinha um listener
   // de clique que chamasse input.click() — só o <input> escondido
   // reagia a 'change'. Clicar em "📷 Clique para anexar foto" não
-  // abria o seletor de arquivo nenhuma vez. A zona pode conter outros
-  // elementos (preview/imagem já escolhida) — o clique precisa
-  // funcionar em qualquer ponto dela, não só numa área vazia.
+  // abria o seletor de arquivo nenhuma vez.
   const zone = input.closest('.photo-zone') || input.parentElement;
+  let fotos = []; // acumula entre seleções — permite ir anexando aos poucos
   if (zone && !zone.dataset.photoZoneBound) {
     zone.dataset.photoZoneBound = '1'; // evita duplo bind se setupPhotoPreview for chamada 2x pro mesmo input
-    zone.addEventListener('click', () => input.click());
+    // Clique na zona abre o seletor, exceto quando o clique foi no
+    // botão de remover uma miniatura (senão removeria e reabriria
+    // o seletor no mesmo clique).
+    zone.addEventListener('click', (e) => {
+      if (e.target.closest('.photo-thumb-rm')) return;
+      input.click();
+    });
   }
   input.addEventListener('change', () => {
-    const file = input.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast('Foto maior que 5MB.','er'); input.value=''; return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      _resizeImage(e.target.result, 1900, 1080).then(({dataUrl, b64, w, h}) => {
-        const prev = document.getElementById(previewId);
-        if (prev) prev.innerHTML = `
-          <img src="${dataUrl}" class="photo-thumb" alt="Foto">
-          <div style="font-size:12px;color:var(--txt2)">
-            <strong>${file.name}</strong><br>
-            <span style="color:var(--txt3)">${w}×${h}px</span>
-          </div>`;
-        // onReady recebe o b64 já reduzido, não o arquivo original —
-        // é isso que vai pra fotoUrl (data:...;base64,${b64}).
-        if (onReady) onReady(b64, file);
-      }).catch(() => {
-        showToast('Não foi possível processar a foto.', 'er');
-        input.value = '';
-      });
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    const grande = files.find(f => f.size > 5 * 1024 * 1024);
+    if (grande) { showToast(`Foto "${grande.name}" maior que 5MB.`, 'er'); input.value = ''; return; }
+    Promise.all(files.map(file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        // Sempre redimensiona pra caber em 1900×1080 (ver _resizeImage).
+        _resizeImage(e.target.result, 1900, 1080)
+          .then(({ dataUrl, w, h }) => resolve({ dataUrl, name: file.name, w, h }))
+          .catch(reject);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }))).then(novasFotos => {
+      fotos = fotos.concat(novasFotos);
+      input.value = ''; // libera selecionar o mesmo arquivo de novo depois de remover
+      _render();
+    }).catch(() => {
+      showToast('Não foi possível processar uma das fotos.', 'er');
+      input.value = '';
+    });
   });
+  function _render() {
+    const prev = document.getElementById(previewId);
+    if (prev) {
+      prev.innerHTML = fotos.length
+        ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${fotos.map((f, i) => `
+            <div style="position:relative">
+              <img src="${f.dataUrl}" class="photo-thumb" alt="${f.name}" title="${f.name} — ${f.w}×${f.h}px">
+              <button type="button" class="photo-thumb-rm" data-i="${i}" title="Remover"
+                style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+                background:var(--red);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button>
+            </div>`).join('')}
+          </div>`
+        : `<span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto(s)</span>`;
+      prev.querySelectorAll('.photo-thumb-rm').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          fotos.splice(+btn.dataset.i, 1);
+          _render();
+        });
+      });
+    }
+    if (onReady) onReady(fotos.map(f => f.dataUrl), fotos);
+  }
 }
 
 // Reduz a imagem pra caber em maxW×maxH (mantém proporção, nunca
