@@ -24,7 +24,13 @@ export function prio(p) {
   if (!p) return '';
   const c = { '1':'b-c1','2':'b-c2','3':'b-c3','4':'b-c4','Alta':'b-c2','Média':'b-c3','Baixa':'b-c4','Urgente':'b-c1' };
   const d = { '1':'d-1','2':'d-2','3':'d-3','4':'d-4','Alta':'d-2','Média':'d-3','Baixa':'d-4','Urgente':'d-1' };
-  const lbl = { '1':'1 – Crítico','2':'2 – Alta','3':'3 – Média','4':'4 – Baixa' };
+  // Registros antigos gravam prioridade como palavra (Alta/Média/Baixa/
+  // Urgente) em vez do número 1-4 — sem essas chaves aqui, caíam no
+  // fallback `lbl[p]||p` e mostravam só "Alta" em vez de "2 – Alta".
+  const lbl = {
+    '1':'1 – Crítico', '2':'2 – Alta', '3':'3 – Média', '4':'4 – Baixa',
+    'Urgente':'1 – Crítico', 'Alta':'2 – Alta', 'Média':'3 – Média', 'Baixa':'4 – Baixa',
+  };
   return `<span class="badge ${c[p]||''}"><span class="pdot ${d[p]||''}"></span>${lbl[p]||p}</span>`;
 }
 
