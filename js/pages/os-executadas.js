@@ -104,7 +104,7 @@ export function render() {
   });
   const tb = document.getElementById('tb-exec');
   if (!tb) return;
-  if (!data.length) { tb.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="ei">📋</div><p>Nenhuma ordem encontrada.</p></div></td></tr>`; return; }
+  if (!data.length) { tb.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><p>Nenhuma ordem encontrada.</p></div></td></tr>`; return; }
   tb.innerHTML = data.map(o=>{
     const status = _status(o);
     const acoes = status==='aberta'
@@ -128,6 +128,7 @@ export function render() {
       ${o.ini&&o.fim?`${o.ini}–${o.fim}`:'—'}
       ${o.durMin?`<br><span style="color:var(--txt3)">${o.durMin}min</span>`:''}
     </td>
+    <td>${_thumbLista(o)}</td>
     <td><div style="display:flex;gap:4px">
       ${acoes}
       <button class="btn btn-d" onclick="window._delOS('${o.numero}')">✕</button>
@@ -137,6 +138,33 @@ export function render() {
   window._verDet  = verDet;
   window._delOS   = delOS;
   window._atender = numero => abrirConcluir(numero, 'os');
+  window._ampliarFoto = _ampliarFoto;
+}
+
+// Miniatura da 1ª foto da OS na listagem (Executadas). Se houver mais
+// de uma, só a 1ª aparece aqui — a galeria completa fica na tela de
+// detalhe (Ver → 📷 Fotos). Clicar amplia a mesma 1ª foto em tamanho
+// real; pra ver as demais, usar "Ver".
+function _thumbLista(o) {
+  const url = (o.fotos && o.fotos[0]) || o.fotoUrl;
+  if (!url) return '<span style="color:var(--txt3)">—</span>';
+  return `<img src="${url}" alt="Foto" title="Clique pra ampliar"
+    style="width:40px;height:40px;object-fit:cover;border-radius:4px;cursor:pointer;border:1px solid var(--bord)"
+    onclick="window._ampliarFoto('${url}')">`;
+}
+
+// Lightbox simples — cria um overlay full-screen com a foto em
+// tamanho real, sem precisar de mais um modal fixo no index.html.
+// Clicar em qualquer lugar (ou Esc) fecha.
+function _ampliarFoto(url) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:24px';
+  ov.innerHTML = `<img src="${url}" style="max-width:100%;max-height:100%;border-radius:var(--rs);box-shadow:var(--shad)" alt="Foto ampliada">`;
+  const fechar = () => { ov.remove(); document.removeEventListener('keydown', onEsc); };
+  const onEsc = e => { if (e.key === 'Escape') fechar(); };
+  ov.addEventListener('click', fechar);
+  document.addEventListener('keydown', onEsc);
+  document.body.appendChild(ov);
 }
 
 // Status efetivo de uma OS. Registros antigos (legado, criados antes

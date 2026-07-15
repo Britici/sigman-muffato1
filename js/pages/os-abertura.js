@@ -54,7 +54,10 @@ export function init() {
 // permite estilizar bolinha colorida por option de forma confiável
 // entre navegadores. Ordem de cor confirmada com Tiago: 1 vermelho,
 // 2 amarelo, 3 azul, 4 verde.
-const PRIORIDADE_LABEL = { 1: '1 – Crítico', 2: '2 – Alta', 3: '3 – Média', 4: '4 – Baixa' };
+const PRIORIDADE_LABEL = {
+  1: '1 – Crítico (Parada de Máquina)', 2: '2 – Alta (Risco de Parada)',
+  3: '3 – Média (Preventiva)', 4: '4 – Baixa (Melhoria)',
+};
 const PRIORIDADE_COR   = { 1: 'var(--red)', 2: 'var(--yel)', 3: 'var(--blu)', 4: 'var(--grn)' };
 
 function _bindPrioridadeDropdown() {
