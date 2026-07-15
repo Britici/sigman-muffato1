@@ -20,7 +20,7 @@ import { CU } from '../auth.js';
 import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js';
 import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js';
 
-let _fotoDataUrl = null;
+let _fotosDataUrl = [];
 // ⚠️ Este módulo tem DOM ESTÁTICO em index.html (o router só alterna
 // a classe .on em navegação, não recria o markup) — mas init() roda
 // a cada navegação. Sem esta guarda, addEventListener empilha 1
@@ -42,8 +42,8 @@ export function init() {
     document.getElementById('ab-sl')?.addEventListener('change', _populateMaquinas);
     document.getElementById('btn-ab-clear')?.addEventListener('click', _limpar);
     document.getElementById('btn-ab-save')?.addEventListener('click', _salvar);
-    setupPhotoPreview('ab-photo-input', 'ab-photo-preview', (b64, file) => {
-      _fotoDataUrl = `data:${file.type};base64,${b64}`;
+    setupPhotoPreview('ab-photo-input', 'ab-photo-preview', (dataUrls) => {
+      _fotosDataUrl = dataUrls;
     });
     _bindPrioridadeDropdown();
   }
@@ -201,7 +201,7 @@ function _limpar() {
   sv('ab-mn', CU?.perfil !== 'producao' ? (CU?.login || '') : '');
   const cbConcluida = document.getElementById('ab-concluida');
   if (cbConcluida) cbConcluida.checked = true;
-  _fotoDataUrl = null;
+  _fotosDataUrl = [];
   const prev = document.getElementById('ab-photo-preview');
   if (prev) prev.innerHTML = '<span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto</span>';
   const inputFoto = document.getElementById('ab-photo-input');
@@ -247,22 +247,25 @@ async function _salvar() {
   // de concluída de fato.
   const concluida = ehProducao ? true : (document.getElementById('ab-concluida')?.checked !== false);
   const acaoPrevRaw = ehProducao ? '' : v('ab-ap').trim();
-  const fotoRaw = ehProducao ? '' : (_fotoDataUrl || '');
+  const fotosRaw = ehProducao ? [] : _fotosDataUrl;
+  const fotoRaw = fotosRaw[0] || ''; // compatibilidade: fotoUrl (singular) segue existindo
+  // em todo o resto do app (detalhe, histórico, etc) até O.S. Executadas
+  // ser atualizada pra exibir múltiplas fotos — ver `fotos[]` abaixo.
   const temIntervaloPreenchido = !ehProducao && (ini || fim || acaoExec || paradaMin || fotoRaw);
 
   const numero = _genOS();
   const agora  = new Date().toISOString();
   const historicoInicial = (!ehProducao && !concluida && temIntervaloPreenchido) ? [{
     manut: manutUser?.nome || manutLogin, manutLogin,
-    ini, fim, durMin, paradaMin, acao: acaoExec, acaoPrev: acaoPrevRaw, fotoUrl: fotoRaw,
+    ini, fim, durMin, paradaMin, acao: acaoExec, acaoPrev: acaoPrevRaw, fotoUrl: fotoRaw, fotos: fotosRaw,
     registradoEm: agora,
   }] : [];
   // Campos ativos: se ficou "não concluída" e o que foi digitado virou
   // histórico acima, a OS nasce com os 7 campos ativos zerados (igual
   // ao padrão de _registrarIntervaloParcial em os-executadas.js).
   const camposAtivos = (!ehProducao && !concluida)
-    ? { ini: '', fim: '', durMin: 0, paradaMin: 0, acao: '', acaoPrev: '', fotoUrl: '' }
-    : { ini, fim, durMin, paradaMin, acao: ehProducao ? '' : acaoExec, acaoPrev: acaoPrevRaw, fotoUrl: fotoRaw };
+    ? { ini: '', fim: '', durMin: 0, paradaMin: 0, acao: '', acaoPrev: '', fotoUrl: '', fotos: [] }
+    : { ini, fim, durMin, paradaMin, acao: ehProducao ? '' : acaoExec, acaoPrev: acaoPrevRaw, fotoUrl: fotoRaw, fotos: fotosRaw };
 
   const os = {
     id: crypto.randomUUID(), numero,
