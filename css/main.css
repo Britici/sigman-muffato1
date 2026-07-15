@@ -69,7 +69,7 @@ body{font-family:var(--fb);font-size:14px;background:var(--bg);color:var(--txt);
 .psel-placeholder{color:var(--txt3)}
 .psel-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf2);border:1px solid var(--bord2);border-radius:var(--rs);box-shadow:var(--shad);z-index:120;display:none;overflow:hidden}
 .psel.open .psel-menu{display:block}
-.psel-item{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;background:transparent;border:none;color:var(--txt);font-family:var(--fb);font-size:13px;text-align:left;cursor:pointer}
+.psel-item{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;background:transparent;border:none;color:var(--txt);font-family:var(--fb);font-size:14px;text-align:left;cursor:pointer}
 .psel-item:hover{background:var(--surf3)}
 .psel-item+.psel-item{border-top:1px solid var(--bord)}
 
