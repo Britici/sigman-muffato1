@@ -30,6 +30,7 @@ export function init() {
       navigator.clipboard.writeText(document.getElementById('md-wa')?.textContent||'').then(()=>showToast('Copiado!'));
     });
     document.getElementById('md-print-btn')?.addEventListener('click', _imprimirOS);
+    document.getElementById('md-continuar-btn')?.addEventListener('click', () => { if (_curOS) _continuarOS(_curOS.numero); });
     document.getElementById('md-rac-btn')?.addEventListener('click', () => { if(_curOS) abrirRAC(_curOS); });
     document.getElementById('btn-concluir')?.addEventListener('click', _concluir);
     document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
@@ -107,8 +108,11 @@ export function render() {
   if (!data.length) { tb.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><p>Nenhuma ordem encontrada.</p></div></td></tr>`; return; }
   tb.innerHTML = data.map(o=>{
     const status = _status(o);
+    const temHist = (o.historico_intervalos || []).length > 0;
     const acoes = status==='aberta'
-      ? `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`
+      ? (temHist
+          ? `<button class="btn btn-sm btn-p" onclick="window._continuarOS('${o.numero}')">▶ Continuar</button>`
+          : `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`)
       : `<button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>`;
     return `<tr>
     <td style="white-space:nowrap">
@@ -138,6 +142,7 @@ export function render() {
   window._verDet  = verDet;
   window._delOS   = delOS;
   window._atender = numero => abrirConcluir(numero, 'os');
+  window._continuarOS = _continuarOS;
   window._ampliarFoto = _ampliarFoto;
 }
 
@@ -204,10 +209,20 @@ export function verDet(numero) {
   if(waEl){waEl.textContent=wa;waEl.style.display='block';}
   if(waBtn) waBtn.style.display='inline-block';
   document.getElementById('md-print-btn').style.display='inline-block';
+  // Bloco 6 — "Continuar O.S.": só faz sentido pra quem já foi
+  // atendida parcialmente (status 'aberta' MAS já tem histórico de
+  // intervalo — se nunca foi atendida, o botão certo é "▶ Atender",
+  // que já existe na listagem).
+  const btnContinuar = document.getElementById('md-continuar-btn');
+  if (btnContinuar) {
+    const temHistorico = _status(o) === 'aberta' && (o.historico_intervalos || []).length > 0;
+    btnContinuar.style.display = temHistorico ? 'block' : 'none';
+  }
   document.getElementById('md-rac-btn').style.display=_precisaRAC(o)?'inline-block':'none';
   window._aprovarProd  = _aprovarProd;
   window._aprovarManut = _aprovarManut;
   window._toggleConcluidaDet = _toggleConcluidaDet;
+  window._continuarOS  = _continuarOS;
   openM('m-det');
 }
 
@@ -221,7 +236,7 @@ function _blocoConcluidaDet(o) {
   const histThumbs = _thumbsHistorico(hist);
   if (o.status === 'aberta') {
     if (!hist.length) return '';
-    return `<div class="dr" style="flex-direction:column;gap:8px"><span class="dl">Histórico</span><span class="dv" style="color:var(--txt3)">${hist.length} intervalo(s) anterior(es) — use "▶ Atender" pra continuar</span>${histThumbs}</div>`;
+    return `<div class="dr" style="flex-direction:column;gap:8px"><span class="dl">Histórico</span><span class="dv" style="color:var(--txt3)">${hist.length} intervalo(s) anterior(es) — use "▶ Continuar O.S." abaixo pra continuar</span>${histThumbs}</div>`;
   }
   if (o.status !== 'aguardando_aprovacao' && o.status !== 'concluida') return '';
   const histTag = hist.length ? ` <span style="color:var(--txt3);font-weight:400">(+${hist.length} intervalo(s) anterior(es))</span>` : '';
@@ -346,6 +361,27 @@ export function delOS(numero) {
   saveDB(); render(); updOSHoje();
   apiPost({action:'delete',sheet:'ordens',id:numero,idCol:'OS_Numero'});
   showToast(`${numero} excluída.`,'war');
+}
+
+// Bloco 6 — "Continuar O.S.": mesma modal de Atender/Concluir
+// (m-con), mas em vez de abrir em branco, usa o último registro de
+// historico_intervalos[] como ponto de partida — evita retypar o que
+// já tinha sido levantado no atendimento anterior. Datas/horários
+// ficam em branco de propósito (é um novo período de trabalho sendo
+// registrado agora, não o mesmo horário de antes); só o texto do
+// serviço executado e o manutentor vêm sugeridos, editáveis.
+function _continuarOS(numero) {
+  closeM('m-det');
+  abrirConcluir(numero, 'os'); // já reseta os campos e abre o modal
+  const db = getDB();
+  const o = db.ordens.find(x => x.numero === numero);
+  const hist = o?.historico_intervalos || [];
+  if (!hist.length) return;
+  const ultimo = hist[hist.length - 1];
+  document.getElementById('mc-tit').textContent = `Continuar ${numero}`;
+  sv('mc-ds', ultimo.acao || '');
+  if (ultimo.manutLogin) sv('mc-mn', ultimo.manutLogin);
+  showToast(`Retomando de onde parou — ${hist.length} intervalo(s) anterior(es) no histórico.`);
 }
 
 export function abrirConcluir(id, tipo) {
