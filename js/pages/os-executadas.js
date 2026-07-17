@@ -19,6 +19,7 @@ let _concluirId = null, _concluirTipo = null;
 // em 2026-07-01, antes do Bloco 5.
 let _bound = false;
 let _fotosDataUrl = []; // fotos anexadas no modal de Atender/Concluir (múltiplas)
+let _waText = ''; // texto do whatsapp em memória — card visual removido, só o botão "Copiar" fica
 
 export function init() {
   _populateFiltros();
@@ -27,7 +28,7 @@ export function init() {
     _bindFiltros();
     _bindSortHeaders();
     document.getElementById('md-wa-btn')?.addEventListener('click', () => {
-      navigator.clipboard.writeText(document.getElementById('md-wa')?.textContent||'').then(()=>showToast('Copiado!'));
+      navigator.clipboard.writeText(_waText||'').then(()=>showToast('Copiado!'));
     });
     document.getElementById('md-print-btn')?.addEventListener('click', _imprimirOS);
     document.getElementById('md-continuar-btn')?.addEventListener('click', () => { if (_curOS) _continuarOS(_curOS.numero); });
@@ -193,20 +194,18 @@ export function verDet(numero) {
     <div class="dr"><span class="dl">Tipo</span><span class="dv">${tipoBadge(o.tipo)}</span></div>
     <div class="dr"><span class="dl">Prioridade</span><span class="dv">${prio(o.prioridade)}</span></div>
     ${o.solicitante?`<div class="dr"><span class="dl">Solicitante</span><span class="dv">${o.solicitante}</span></div>`:''}
-    <div class="dr"><span class="dl">Manutentor</span><span class="dv">${o.manut||'—'}</span></div>
     <div class="dr"><span class="dl">Data</span><span class="dv">${fd(o.data)}</span></div>
-    <div class="dr"><span class="dl">Horário</span><span class="dv">${o.ini||'—'} – ${o.fim||'—'}${o.durMin?` (${o.durMin}min)`:''}</span></div>
     ${o.paradaMin?`<div class="dr"><span class="dl">Parada</span><span class="dv">${o.paradaMin}min</span></div>`:''}
     <div class="dr"><span class="dl">Problema</span><span class="dv">${o.prob||'—'}</span></div>
-    <div class="dr"><span class="dl">Ação Executada</span><span class="dv">${o.acao||'—'}</span></div>
+    ${_listaServicosDet(o)}
     ${o.acaoPrev?`<div class="dr"><span class="dl">Ação Preventiva</span><span class="dv">${o.acaoPrev}</span></div>`:''}
     ${_galeriaFotos(o.fotos, o.fotoUrl)}
     ${o.origem&&o.origem!=='direta'?`<div class="dr"><span class="dl">Origem</span><span class="dv" style="color:var(--red)">${o.origemNum||o.origem}</span></div>`:''}
     ${_blocoConcluidaDet(o)}
     ${_blocoAprovacao(o)}`;
-  const wa=`*${o.numero} — Ordem de Serviço*\n\n*Sala:* ${o.sala}\n*Máquina:* ${o.maq}\n*Problema:* ${o.prob||'—'}\n*Tipo:* ${o.tipo}\n*Prioridade:* ${o.prioridade}\n*Tempo:* ${o.ini||'?'} – ${o.fim||'?'} (${o.durMin||'?'}min)\n*Parada:* ${o.paradaMin||'?'}min\n\n${o.acao||''}\n\n_Manutentor: ${o.manut}_`;
-  const waEl=document.getElementById('md-wa'), waBtn=document.getElementById('md-wa-btn');
-  if(waEl){waEl.textContent=wa;waEl.style.display='block';}
+  const servicosWa = _todosServicos(o).map(s => `${s.dataLabel} ${s.ini}–${s.fim} (${s.manut}):\n${s.acao}`).join('\n\n');
+  _waText=`*${o.numero} — Ordem de Serviço*\n\n*Sala:* ${o.sala}\n*Máquina:* ${o.maq}\n*Problema:* ${o.prob||'—'}\n*Tipo:* ${o.tipo}\n*Prioridade:* ${o.prioridade}\n*Parada:* ${o.paradaMin||'?'}min\n\n${servicosWa||o.acao||''}`;
+  const waBtn=document.getElementById('md-wa-btn');
   if(waBtn) waBtn.style.display='inline-block';
   document.getElementById('md-print-btn').style.display='inline-block';
   // Bloco 6 — "Continuar O.S.": só faz sentido pra quem já foi
@@ -231,6 +230,41 @@ export function verDet(numero) {
 // (aguardando_aprovacao/concluida) — pra 'aberta' não há nada ativo
 // pra "desconcluir"; mostra só um resumo do histórico, se existir, e
 // aponta pro botão Atender.
+// Todos os serviços já executados nesta OS, em ordem cronológica:
+// cada intervalo do histórico + o atendimento atual (se já tiver algo
+// preenchido). Cada item = {manut, dataLabel, ini, fim, acao}.
+function _todosServicos(o) {
+  const hist = (o.historico_intervalos || []).map(h => ({
+    manut: h.manut || '—', dataLabel: h.registradoEm ? fd(h.registradoEm.slice(0,10)) : fd(o.data),
+    ini: h.ini || '—', fim: h.fim || '—', acao: h.acao || '—',
+  }));
+  const atual = (o.acao || o.ini || o.fim) ? [{
+    manut: o.manut || '—', dataLabel: fd(o.data), ini: o.ini || '—', fim: o.fim || '—', acao: o.acao || '—',
+  }] : [];
+  return [...hist, ...atual];
+}
+
+// Bloco "Serviços Executados" no Detalhe — todos os atendimentos
+// (histórico + atual), cada um com manutentor, data, horário e
+// descrição completa do que foi feito. Substitui as linhas soltas de
+// Manutentor/Horário/Ação Executada quando há mais de 1 atendimento.
+function _listaServicosDet(o) {
+  const servicos = _todosServicos(o);
+  if (!servicos.length) return '<div class="dr"><span class="dl">Ação Executada</span><span class="dv">—</span></div>';
+  return `<div class="dr" style="flex-direction:column;gap:8px">
+    <span class="dl">Serviços Executados${servicos.length>1?` (${servicos.length})`:''}</span>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${servicos.map(s => `
+        <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--txt3);margin-bottom:6px">
+            <span>👤 ${s.manut}</span><span>📅 ${s.dataLabel} · ${s.ini}–${s.fim}</span>
+          </div>
+          <div style="font-size:13px;color:var(--txt)">${s.acao}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
 function _blocoConcluidaDet(o) {
   const hist = o.historico_intervalos || [];
   const histThumbs = _thumbsHistorico(hist);
@@ -577,7 +611,9 @@ function _imprimirOS() {
     <div class="f"><label>Parada (min)</label><p>${o.paradaMin||'—'}</p></div>
   </div>
   <div class="s-t">Problema / Ocorrência</div><div class="s-c">${o.prob||'—'}</div>
-  <div class="s-t">Ação / Serviço Executado</div><div class="s-c">${o.acao||'—'}</div>
+  ${_todosServicos(o).map(s => `
+  <div class="s-t">Serviço Executado — ${s.dataLabel} · ${s.ini}–${s.fim} · ${s.manut}</div>
+  <div class="s-c">${s.acao}</div>`).join('') || '<div class="s-t">Ação / Serviço Executado</div><div class="s-c">—</div>'}
   ${o.acaoPrev?`<div class="s-t">Ação Preventiva</div><div class="s-c">${o.acaoPrev}</div>`:''}
   <div style="display:flex;justify-content:space-between;margin-top:20px">
     <div><div class="ass">Assinatura do Manutentor</div></div>

@@ -34,6 +34,17 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// Esc fecha qualquer popup aberto — modal (.mb.on, o mais recente
+// primeiro caso haja mais de um empilhado) ou a sidebar mobile.
+// Pedido recorrente do Tiago: modais precisam fechar com Esc igual a
+// qualquer app decente, não só clicando no X ou fora.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const abertos = document.querySelectorAll('.mb.on');
+  if (abertos.length) { abertos[abertos.length-1].classList.remove('on'); return; }
+  closeSB();
+});
+
 // ── Inicialização ─────────────────────────────────────────────
 async function init() {
   const loggedIn = await tryAutoLogin();
