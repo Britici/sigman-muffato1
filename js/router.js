@@ -4,9 +4,9 @@
 // Cada página é um módulo JS independente em js/pages/
 // ============================================================
 
-import { getDB } from './api.js?v=20260717a';
-import { showToast } from './utils.js?v=20260717a';
-import { podeAcessar } from './auth.js?v=20260717a';
+import { getDB } from './api.js';
+import { showToast } from './utils.js';
+import { podeAcessar } from './auth.js';
 
 // Mapa hash → { title, pageId, loader }
 // loader é importado dinamicamente — só carrega quando necessário
@@ -26,25 +26,19 @@ const ROUTES = {
 };
 
 // Mapa de loader dinâmico por rota
-// ?v=window.SIGMAN_VER evita cache stale — sem isso, o navegador podia
-// continuar servindo uma versão antiga de um js/pages/*.js já em cache
-// mesmo depois de aplicar um novo zip, sem dar nenhum erro visível
-// (bug real encontrado: correção do Esc parecia "não funcionar", mas
-// era o browser servindo os-executadas.js antigo do cache).
-const _V = window.SIGMAN_VER || '';
 const PAGE_LOADERS = {
-  'dashboard':          () => import(`./pages/dashboard.js?v=${_V}`),
-  'os-executadas':      () => import(`./pages/os-executadas.js?v=${_V}`),
-  'os-abertura':        () => import(`./pages/os-abertura.js?v=${_V}`),
-  'os-planejadas':      () => import(`./pages/os-planejadas.js?v=${_V}`),
-  'os-planejamento':    () => import(`./pages/os-planejamento.js?v=${_V}`),
-  'inspecao':           () => import(`./pages/inspecao.js?v=${_V}`),
-  'inspecao-tmpl':      () => import(`./pages/inspecao-tmpl.js?v=${_V}`),
-  'preventiva':         () => import(`./pages/preventiva.js?v=${_V}`),
-  'analise-causa-raiz': () => import(`./pages/analise-causa-raiz.js?v=${_V}`),
-  'ativos':             () => import(`./pages/ativos.js?v=${_V}`),
-  'usuarios':           () => import(`./pages/usuarios.js?v=${_V}`),
-  'configuracoes':      () => import(`./pages/configuracoes.js?v=${_V}`),
+  'dashboard':          () => import('./pages/dashboard.js'),
+  'os-executadas':      () => import('./pages/os-executadas.js'),
+  'os-abertura':        () => import('./pages/os-abertura.js'),
+  'os-planejadas':      () => import('./pages/os-planejadas.js'),
+  'os-planejamento':    () => import('./pages/os-planejamento.js'),
+  'inspecao':           () => import('./pages/inspecao.js'),
+  'inspecao-tmpl':      () => import('./pages/inspecao-tmpl.js'),
+  'preventiva':         () => import('./pages/preventiva.js'),
+  'analise-causa-raiz': () => import('./pages/analise-causa-raiz.js'),
+  'ativos':             () => import('./pages/ativos.js'),
+  'usuarios':           () => import('./pages/usuarios.js'),
+  'configuracoes':      () => import('./pages/configuracoes.js'),
 };
 
 let _currentRoute = null;

@@ -15,10 +15,10 @@
 // O.S. Executadas (botão "Atender"), não aqui.
 // ============================================================
 
-import { getDB, saveDB, apiPost, _genOS } from '../api.js?v=20260717a';
-import { CU } from '../auth.js?v=20260717a';
-import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260717a';
-import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js?v=20260717a';
+import { getDB, saveDB, apiPost, _genOS } from '../api.js';
+import { CU } from '../auth.js';
+import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js';
+import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js';
 
 let _fotosDataUrl = [];
 // ⚠️ Este módulo tem DOM ESTÁTICO em index.html (o router só alterna
