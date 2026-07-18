@@ -284,6 +284,7 @@ th.th-fil select,th.th-fil input.col-fil-txt{display:block;margin-top:4px;width:
 /* EMPTY */
 .empty{text-align:center;padding:48px 20px;color:var(--txt3)}
 .empty .ei{font-size:34px;margin-bottom:10px;opacity:.5}
+.empty .ei-ok{font-size:34px;margin-bottom:10px;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:8px;background:var(--grn);color:#fff;opacity:1}
 .empty p{font-size:13px}
 
 /* LAYOUT */

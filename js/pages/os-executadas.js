@@ -2,10 +2,10 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js';
-import { CU, updOSHoje } from '../auth.js';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js';
+import { getDB, saveDB, apiPost } from '../api.js?v=20260717a';
+import { CU, updOSHoje } from '../auth.js?v=20260717a';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260717a';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260717a';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -65,7 +65,7 @@ function _populateFiltros() {
 function _bindFiltros() {
   const renderD = debounce(render, 280);
   document.getElementById('fe-tx')?.addEventListener('input', renderD);
-  ['fe-tp','fe-st','fe-sl','fe-mn','fe-dt-ini','fe-dt-fim'].forEach(id =>
+  ['fe-tp','fe-sl','fe-mn','fe-dt-ini','fe-dt-fim'].forEach(id =>
     document.getElementById(id)?.addEventListener('change', render));
 }
 
@@ -83,12 +83,11 @@ function _bindSortHeaders() {
 export function render() {
   const db = getDB();
   _populateFiltros();
-  const tx=v('fe-tx').toLowerCase(), tp=v('fe-tp'), st=v('fe-st'), sl=v('fe-sl'),
+  const tx=v('fe-tx').toLowerCase(), tp=v('fe-tp'), sl=v('fe-sl'),
         mn=v('fe-mn'), dtI=v('fe-dt-ini'), dtF=v('fe-dt-fim');
   let data = [...db.ordens];
   if (tx)  data = data.filter(o=>[o.numero,o.sala,o.maq,o.manut,o.tipo,o.prob].some(x=>x&&x.toLowerCase().includes(tx)));
   if (tp)  data = data.filter(o=>o.tipo===tp);
-  if (st)  data = data.filter(o=>_status(o)===st);
   if (sl)  data = data.filter(o=>o.sala===sl);
   if (mn)  data = data.filter(o=>o.manut===mn);
   if (dtI) data = data.filter(o=>o.data>=dtI);
@@ -104,47 +103,67 @@ export function render() {
     th.classList.remove('asc','desc');
     if(th.dataset.col===_sort.col) th.classList.add(_sort.dir);
   });
-  const tb = document.getElementById('tb-exec');
-  if (!tb) return;
-  if (!data.length) { tb.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="ei">📋</div><p>Nenhuma ordem encontrada.</p></div></td></tr>`; return; }
-  tb.innerHTML = data.map(o=>{
-    const status = _status(o);
-    const temHist = (o.historico_intervalos || []).length > 0;
-    const acoes = status==='aberta'
-      ? (temHist
-          ? `<button class="btn btn-sm btn-p" onclick="window._continuarOS('${o.numero}')">▶ Continuar</button>`
-          : `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`)
-      : `<button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>`;
-    return `<tr>
-    <td style="white-space:nowrap">
-      <div style="display:flex;align-items:center;gap:4px">
-        ${_precisaRAC(o)?`<span class="rac-dot" title="RAC obrigatório"></span>`:''}
-        <span class="osn">${o.numero}</span>
-      </div>
-    </td>
-    <td style="font-size:12px;white-space:nowrap">${fd(o.data)}</td>
-    <td>${o.sala}</td>
-    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${o.maq}">${o.maq}</td>
-    <td>${tipoBadge(o.tipo)}</td>
-    <td>${prio(o.prioridade)}</td>
-    <td>${stBadge(_statusLabel(status))}</td>
-    <td style="font-size:12px">${o.manut||'—'}</td>
-    <td style="font-family:var(--fm);font-size:11px;white-space:nowrap">
-      ${o.ini&&o.fim?`${o.ini}–${o.fim}`:'—'}
-      ${o.durMin?`<br><span style="color:var(--txt3)">${o.durMin}min</span>`:''}
-    </td>
-    <td>${_thumbLista(o)}</td>
-    <td><div style="display:flex;gap:4px">
-      ${acoes}
-      <button class="btn btn-d" onclick="window._delOS('${o.numero}')">✕</button>
-    </div></td>
-  </tr>`;
-  }).join('');
+  // Bloco 1 — 3 seções por status, em vez de 1 tabela só com coluna
+  // Status. A coluna Status virou redundante (a seção já diz qual é),
+  // então saiu da linha — ver _rowHtml().
+  const nc = data.filter(o => _status(o) === 'aberta');
+  const aa = data.filter(o => _status(o) === 'aguardando_aprovacao');
+  const ap = data.filter(o => _status(o) === 'concluida');
+  _renderSecao('tb-exec-nc', nc, '✅', 'Nenhuma O.S. não concluída.');
+  _renderSecao('tb-exec-aa', aa, '📋', 'Nenhuma O.S. aguardando aprovação.');
+  _renderSecao('tb-exec-ap', ap, '📋', 'Nenhuma O.S. aprovada ainda.');
+  const ctNc = document.getElementById('ct-nc'); if (ctNc) ctNc.textContent = `Não Concluídas (${nc.length})`;
+  const ctAa = document.getElementById('ct-aa'); if (ctAa) ctAa.textContent = `Concluídas Aguardando Aprovação (${aa.length})`;
+  const ctAp = document.getElementById('ct-ap'); if (ctAp) ctAp.textContent = `Concluídas Aprovadas (${ap.length})`;
   window._verDet  = verDet;
   window._delOS   = delOS;
   window._atender = numero => abrirConcluir(numero, 'os');
   window._continuarOS = _continuarOS;
   window._ampliarFoto = _ampliarFoto;
+}
+
+function _renderSecao(tbId, data, icone, msgVazia) {
+  const tb = document.getElementById(tbId);
+  if (!tb) return;
+  if (!data.length) {
+    const cls = icone === '✅' ? 'ei-ok' : 'ei';
+    tb.innerHTML = `<tr><td colspan="10"><div class="empty"><div class="${cls}">${icone}</div><p>${msgVazia}</p></div></td></tr>`;
+    return;
+  }
+  tb.innerHTML = data.map(_rowHtml).join('');
+}
+
+function _rowHtml(o) {
+  const status = _status(o);
+  const temHist = (o.historico_intervalos || []).length > 0;
+  const acoes = status==='aberta'
+    ? (temHist
+        ? `<button class="btn btn-sm btn-p" onclick="window._continuarOS('${o.numero}')">▶ Continuar</button>`
+        : `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`)
+    : `<button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>`;
+  return `<tr>
+  <td style="white-space:nowrap">
+    <div style="display:flex;align-items:center;gap:4px">
+      ${_precisaRAC(o)?`<span class="rac-dot" title="RAC obrigatório"></span>`:''}
+      <span class="osn">${o.numero}</span>
+    </div>
+  </td>
+  <td style="font-size:12px;white-space:nowrap">${fd(o.data)}</td>
+  <td>${o.sala}</td>
+  <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${o.maq}">${o.maq}</td>
+  <td>${tipoBadge(o.tipo)}</td>
+  <td>${prio(o.prioridade)}</td>
+  <td style="font-size:12px">${o.manut||'—'}</td>
+  <td style="font-family:var(--fm);font-size:11px;white-space:nowrap">
+    ${o.ini&&o.fim?`${o.ini}–${o.fim}`:'—'}
+    ${o.durMin?`<br><span style="color:var(--txt3)">${o.durMin}min</span>`:''}
+  </td>
+  <td>${_thumbLista(o)}</td>
+  <td><div style="display:flex;gap:4px">
+    ${acoes}
+    <button class="btn btn-d" onclick="window._delOS('${o.numero}')">✕</button>
+  </div></td>
+</tr>`;
 }
 
 // Miniatura da 1ª foto da OS na listagem (Executadas). Se houver mais

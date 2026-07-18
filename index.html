@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
-  <script>window.SIGMAN_VER = '20260623a';</script>
+  <script>window.SIGMAN_VER = '20260717a';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -136,29 +136,73 @@
         <div class="fr">
           <input type="text" id="fe-tx" placeholder="🔍 Buscar...">
           <select id="fe-tp"><option value="">Todos os Tipos</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select>
-          <select id="fe-st"><option value="">Todos os Status</option><option value="aberta">Aberta</option><option value="aguardando_aprovacao">Aguardando Aprovação</option><option value="concluida">Concluída</option></select>
           <select id="fe-sl"><option value="">Todas as Salas</option></select>
           <select id="fe-mn"><option value="">Todos os Manut.</option></select>
           <input type="date" id="fe-dt-ini" title="Data inicial">
           <input type="date" id="fe-dt-fim" title="Data final">
         </div>
-        <div class="tw">
-          <table>
-            <thead><tr>
-              <th class="sortable" data-col="numero" style="width:110px">OS #</th>
-              <th class="sortable" data-col="data">Data</th>
-              <th class="sortable" data-col="sala">Sala</th>
-              <th class="sortable" data-col="maq">Máquina</th>
-              <th class="sortable" data-col="tipo">Tipo</th>
-              <th class="sortable" data-col="prioridade">Prioridade</th>
-              <th>Status</th>
-              <th class="sortable" data-col="manut">Manutentor</th>
-              <th>Tempo</th>
-              <th style="width:56px">Foto</th>
-              <th style="min-width:160px">Ações</th>
-            </tr></thead>
-            <tbody id="tb-exec"></tbody>
-          </table>
+
+        <div class="card" style="border-left:3px solid var(--red)">
+          <div class="card-t" id="ct-nc">Não Concluídas</div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th class="sortable" data-col="numero" style="width:110px">OS #</th>
+                <th class="sortable" data-col="data">Data</th>
+                <th class="sortable" data-col="sala">Sala</th>
+                <th class="sortable" data-col="maq">Máquina</th>
+                <th class="sortable" data-col="tipo">Tipo</th>
+                <th class="sortable" data-col="prioridade">Prioridade</th>
+                <th class="sortable" data-col="manut">Manutentor</th>
+                <th>Tempo</th>
+                <th style="width:56px">Foto</th>
+                <th style="min-width:160px">Ações</th>
+              </tr></thead>
+              <tbody id="tb-exec-nc"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--org)">
+          <div class="card-t" id="ct-aa">Concluídas Aguardando Aprovação</div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th class="sortable" data-col="numero" style="width:110px">OS #</th>
+                <th class="sortable" data-col="data">Data</th>
+                <th class="sortable" data-col="sala">Sala</th>
+                <th class="sortable" data-col="maq">Máquina</th>
+                <th class="sortable" data-col="tipo">Tipo</th>
+                <th class="sortable" data-col="prioridade">Prioridade</th>
+                <th class="sortable" data-col="manut">Manutentor</th>
+                <th>Tempo</th>
+                <th style="width:56px">Foto</th>
+                <th style="min-width:160px">Ações</th>
+              </tr></thead>
+              <tbody id="tb-exec-aa"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--grn)">
+          <div class="card-t" id="ct-ap">Concluídas Aprovadas</div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th class="sortable" data-col="numero" style="width:110px">OS #</th>
+                <th class="sortable" data-col="data">Data</th>
+                <th class="sortable" data-col="sala">Sala</th>
+                <th class="sortable" data-col="maq">Máquina</th>
+                <th class="sortable" data-col="tipo">Tipo</th>
+                <th class="sortable" data-col="prioridade">Prioridade</th>
+                <th class="sortable" data-col="manut">Manutentor</th>
+                <th>Tempo</th>
+                <th style="width:56px">Foto</th>
+                <th style="min-width:160px">Ações</th>
+              </tr></thead>
+              <tbody id="tb-exec-ap"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
