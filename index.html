@@ -334,7 +334,21 @@
             <div class="fg"><label>Sala / Local</label><select id="pl-sl"><option value="">Selecione...</option></select></div>
             <div class="fg"><label>Máquina / Ativo</label><select id="pl-mq"><option value="">Selecione a sala</option></select></div>
             <div class="fg"><label>Tipo de Serviço</label><select id="pl-tp"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
-            <div class="fg"><label>Prioridade</label><select id="pl-pr"><option value="">Selecione...</option><option value="1">🔴 1 – Crítico</option><option value="2">🟠 2 – Alta</option><option value="3">🟡 3 – Média</option><option value="4">🟢 4 – Baixa</option></select></div>
+            <div class="fg">
+              <label>Prioridade</label>
+              <div class="psel" id="pl-pr-sel">
+                <input type="hidden" id="pl-pr">
+                <button type="button" class="psel-btn" id="pl-pr-btn">
+                  <span class="psel-placeholder" id="pl-pr-txt">Selecione...</span>
+                </button>
+                <div class="psel-menu">
+                  <button type="button" class="psel-item" data-val="1"><span class="psel-dot" style="background:var(--red)"></span>1 – Emergencial (Parada)</button>
+                  <button type="button" class="psel-item" data-val="2"><span class="psel-dot" style="background:var(--yel)"></span>2 – Urgente (Corretiva Programada)</button>
+                  <button type="button" class="psel-item" data-val="3"><span class="psel-dot" style="background:var(--blu)"></span>3 – Média (Preventiva)</button>
+                  <button type="button" class="psel-item" data-val="4"><span class="psel-dot" style="background:var(--grn)"></span>4 – Baixa (Melhoria)</button>
+                </div>
+              </div>
+            </div>
             <div class="fg"><label>Prazo Limite</label><input type="date" id="pl-pz"></div>
             <div class="fg"><label>Horas por Turno</label><input type="number" id="pl-horas" value="8" min="1" max="24"></div>
             <div class="fg fg-full"><label>Descrição do Serviço Planejado</label><textarea id="pl-ds" placeholder="Descreva o serviço..."></textarea></div>

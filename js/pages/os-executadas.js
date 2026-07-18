@@ -147,6 +147,7 @@ function _rowHtml(o) {
       ${_precisaRAC(o)?`<span class="rac-dot" title="RAC obrigatório"></span>`:''}
       <span class="osn">${o.numero}</span>
     </div>
+    ${o.origem==='plan'&&o.origemNum?`<div style="font-size:11px;color:var(--txt3);margin-top:1px" title="Gerada a partir da O.S. Planejada">(${o.origemNum})</div>`:''}
   </td>
   <td style="font-size:12px;white-space:nowrap">${fd(o.data)}</td>
   <td>${o.sala}</td>
@@ -208,6 +209,7 @@ export function verDet(numero) {
   document.getElementById('md-t').textContent = `${o.sala} · ${o.maq}`;
   document.getElementById('md-b').innerHTML = `
     <div class="dr"><span class="dl">Status</span><span class="dv">${stBadge(_statusLabel(_status(o)))}</span></div>
+    ${o.origem==='plan'&&o.origemNum?`<div class="dr"><span class="dl">Origem</span><span class="dv">O.S. Planejada ${o.origemNum}</span></div>`:''}
     <div class="dr"><span class="dl">Sala</span><span class="dv">${o.sala}</span></div>
     <div class="dr"><span class="dl">Máquina</span><span class="dv">${o.maq}</span></div>
     <div class="dr"><span class="dl">Tipo</span><span class="dv">${tipoBadge(o.tipo)}</span></div>
