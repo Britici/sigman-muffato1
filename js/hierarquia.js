@@ -19,7 +19,7 @@
 // Salas reais de cada manutentor/produção individualmente.
 // ============================================================
 
-import { getDB } from './api.js';
+import { getDB } from './api.js?v=20260718a';
 
 // ordens.sala guarda o NOME da sala (modelo legado de OS) — aprovação
 // e escopo são pelo modelo relacional do Ativos (ids). Esta função é

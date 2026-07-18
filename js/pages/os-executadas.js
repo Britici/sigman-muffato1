@@ -2,10 +2,10 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js';
-import { CU, updOSHoje } from '../auth.js';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js';
+import { getDB, saveDB, apiPost } from '../api.js?v=20260718a';
+import { CU, updOSHoje } from '../auth.js?v=20260718a';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260718a';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260718a';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;

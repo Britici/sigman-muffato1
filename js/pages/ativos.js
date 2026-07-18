@@ -11,9 +11,9 @@
 // que exista ao menos 1 máquina embaixo dele na hierarquia.
 // ============================================================
 
-import { getDB, saveDB } from '../api.js';
-import { podeGerenciarAtivos } from '../auth.js';
-import { showToast, openM, closeM, fd } from '../utils.js';
+import { getDB, saveDB } from '../api.js?v=20260718a';
+import { podeGerenciarAtivos } from '../auth.js?v=20260718a';
+import { showToast, openM, closeM, fd } from '../utils.js?v=20260718a';
 
 // ── Estado do módulo ────────────────────────────────────────
 let _sortAtivos   = { col: 'sala',   dir: 'asc' };
