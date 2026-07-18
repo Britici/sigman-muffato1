@@ -366,11 +366,13 @@ th.th-fil select,th.th-fil input.col-fil-txt{display:block;margin-top:4px;width:
 .insp-row:last-child{border-bottom:none}
 .insp-eq{font-size:13px;font-weight:500;color:var(--txt)}
 .insp-btns{display:flex;gap:5px}
-.iok,.inok{padding:5px 10px;border-radius:var(--rs);border:none;font-family:var(--fw);font-size:11px;font-weight:700;font-variant:small-caps;cursor:pointer;transition:all .15s}
+.iok,.inok,.ina{padding:5px 10px;border-radius:var(--rs);border:none;font-family:var(--fw);font-size:11px;font-weight:700;font-variant:small-caps;cursor:pointer;transition:all .15s}
 .iok{background:rgba(31,217,136,.12);color:var(--grn);border:1px solid rgba(31,217,136,.3)}
 .iok:hover,.iok.on{background:var(--grn);color:#000}
 .inok{background:rgba(196,18,48,.1);color:#ff4d65;border:1px solid rgba(196,18,48,.3)}
 .inok:hover,.inok.on{background:var(--red);color:#fff}
+.ina{background:rgba(107,122,160,.12);color:var(--txt3);border:1px solid var(--bord2)}
+.ina:hover,.ina.on{background:var(--txt3);color:var(--surf)}
 .itime input{background:var(--inp);border:1px solid var(--bord);border-radius:4px;color:var(--txt);font-family:var(--fm);font-size:11px;padding:4px 6px;width:70px;outline:none}
 .itime input:focus{border-color:var(--red)}
 .itime input::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.5);width:12px}

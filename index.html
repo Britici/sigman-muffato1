@@ -423,12 +423,15 @@
         <div class="card">
           <div class="card-t">Dados da Preventiva</div>
           <div class="fg-row">
+            <div class="fg"><label>Sala / Local</label><select id="prev-sala"><option value="">Todas as Salas</option></select></div>
             <div class="fg"><label>Máquina / Ativo</label><select id="prev-maq"><option value="">Selecione...</option></select></div>
             <div class="fg"><label>Data Execução</label><input type="date" id="prev-dt"></div>
             <div class="fg"><label>Manutentor</label><input type="text" id="prev-mn" placeholder="Nome"></div>
             <div class="fg"><label>Periodicidade</label>
-              <select id="prev-periodo"><option>Diária</option><option>Semanal</option><option selected>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option></select>
+              <select id="prev-periodo"><option>Diária</option><option>Semanal</option><option>Quinzenal</option><option selected>Mensal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option></select>
             </div>
+            <div class="fg"><label>Hora Início</label><input type="time" id="prev-hi"></div>
+            <div class="fg"><label>Hora Fim</label><input type="time" id="prev-hf"></div>
           </div>
         </div>
         <div id="prev-body"></div>
