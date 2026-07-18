@@ -280,22 +280,47 @@
       <div class="pg" id="pg-planejadas">
         <div class="ph"><div class="pt"><small>Gestão</small>O.S. Planejadas</div></div>
         <div class="fr">
-          <select id="fp-st"><option value="">Todos os Status</option><option>Pendente</option><option>Atrasada</option><option>Concluída</option></select>
+          <input type="text" id="fp-tx" placeholder="🔍 Buscar...">
+          <select id="fp-tp"><option value="">Todos os Tipos</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select>
+          <select id="fp-sl"><option value="">Todas as Salas</option></select>
         </div>
-        <div class="tw">
-          <table>
-            <thead><tr>
-              <th class="sortable" data-col="numero" style="width:100px">OS #</th>
-              <th class="sortable" data-col="sala">Sala</th>
-              <th class="sortable" data-col="maq">Máquina</th>
-              <th class="sortable" data-col="tipo">Tipo</th>
-              <th class="sortable" data-col="prioridade">Prioridade</th>
-              <th class="sortable" data-col="prazo">Prazo</th>
-              <th class="sortable" data-col="status">Status</th>
-              <th>Ações</th>
-            </tr></thead>
-            <tbody id="tb-plan"></tbody>
-          </table>
+
+        <div class="card" style="border-left:3px solid var(--red)">
+          <div class="card-t" id="ctp-nc">Não Concluídas</div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th class="sortable" data-col="numero" style="width:100px">OS #</th>
+                <th class="sortable" data-col="sala">Sala</th>
+                <th class="sortable" data-col="maq">Máquina</th>
+                <th class="sortable" data-col="tipo">Tipo</th>
+                <th class="sortable" data-col="prioridade">Prioridade</th>
+                <th class="sortable" data-col="prazo">Prazo</th>
+                <th>Status</th>
+                <th style="min-width:190px">Ações</th>
+              </tr></thead>
+              <tbody id="tb-plan-nc"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--grn)">
+          <div class="card-t" id="ctp-c">Concluídas</div>
+          <div class="tw">
+            <table>
+              <thead><tr>
+                <th class="sortable" data-col="numero" style="width:100px">OS #</th>
+                <th class="sortable" data-col="sala">Sala</th>
+                <th class="sortable" data-col="maq">Máquina</th>
+                <th class="sortable" data-col="tipo">Tipo</th>
+                <th class="sortable" data-col="prioridade">Prioridade</th>
+                <th class="sortable" data-col="prazo">Prazo</th>
+                <th>Status</th>
+                <th style="min-width:190px">Ações</th>
+              </tr></thead>
+              <tbody id="tb-plan-c"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -554,6 +579,18 @@
       <button class="btn btn-gh" data-close="mb-rac">Cancelar</button>
       <button class="btn btn-gh" id="btn-rac-print">🖨️ Imprimir</button>
       <button class="btn btn-p"  id="btn-rac-save">💾 Salvar RAC</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: DETALHE O.S. PLANEJADA ══ -->
+<div class="mb" id="m-det-plan">
+  <div class="modal" style="max-width:480px">
+    <div class="mhd"><div class="mtit" id="mdp-tit">Detalhe</div><button class="mcl" data-close="m-det-plan">×</button></div>
+    <div id="mdp-b"></div>
+    <div class="fa">
+      <button class="btn btn-gh" id="mdp-editar-btn">✎ Editar</button>
+      <button class="btn btn-p" id="mdp-concluir-btn">▶ Concluir</button>
     </div>
   </div>
 </div>
