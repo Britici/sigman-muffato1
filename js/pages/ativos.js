@@ -101,10 +101,10 @@ export function render() {
   });
 
   if (_view === 'familias') { _renderFamilias(); return; }
-  _renderEstrutura();
+  _renderAbaEstrutura();
 }
 
-function _renderEstrutura() {
+function _renderAbaEstrutura() {
   const root = document.getElementById('pg-at-body');
   if (!root) return;
 
