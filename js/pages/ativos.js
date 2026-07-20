@@ -16,6 +16,7 @@ import { podeGerenciarAtivos } from '../auth.js?v=20260718a';
 import { showToast, openM, closeM, fd } from '../utils.js?v=20260718a';
 
 // ── Estado do módulo ────────────────────────────────────────
+let _view = 'estrutura'; // 'estrutura' | 'familias' — abas da página Ativos
 let _sortAtivos   = { col: 'sala',   dir: 'asc' };
 let _sortInativos = { col: 'sala',   dir: 'asc' };
 let _filtros = {
@@ -88,6 +89,24 @@ export function render() {
     if (alertBox) alertBox.innerHTML = '';
     return;
   }
+
+  root.innerHTML = `
+    <div class="tabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bord)">
+      <button type="button" class="at-tab ${_view === 'estrutura' ? 'on' : ''}" data-view="estrutura">🗂️ Estrutura</button>
+      <button type="button" class="at-tab ${_view === 'familias' ? 'on' : ''}" data-view="familias">🔧 Famílias de Equipamento</button>
+    </div>
+    <div id="pg-at-body"></div>`;
+  root.querySelectorAll('.at-tab').forEach(btn => {
+    btn.addEventListener('click', () => { _view = btn.dataset.view; render(); });
+  });
+
+  if (_view === 'familias') { _renderFamilias(); return; }
+  _renderEstrutura();
+}
+
+function _renderEstrutura() {
+  const root = document.getElementById('pg-at-body');
+  if (!root) return;
 
   const db = getDB();
   const linhas = _linhas(db);
@@ -987,6 +1006,13 @@ function _formMaquina(id) {
     <div class="fg"><label>TAG (única no sistema)</label>
       <input type="text" id="f-tag" value="${m ? _escAttr(m.tag || '') : ''}" placeholder="Ex: 095-CUB001">
     </div>
+    <div class="fg"><label>Família de Equipamento <span style="color:var(--txt3);font-weight:400">(checklist de preventiva)</span></label>
+      <select id="f-familia">
+        <option value="">Sem família / checklist</option>
+        ${(db.familias || []).filter(f => f.ativo !== false).sort((a, b) => `${a.fabricante} ${a.tipo}`.localeCompare(`${b.fabricante} ${b.tipo}`, 'pt-BR'))
+          .map(f => `<option value="${f.id}" ${m?.familiaId === f.id ? 'selected' : ''}>${_esc(f.fabricante)} — ${_esc(f.tipo)}</option>`).join('')}
+      </select>
+    </div>
     <div class="fg-row">
       <div class="fg"><label>Criticidade</label>
         <select id="f-crit">${[1, 2, 3, 4].map(c => `<option value="${c}" ${(m?.criticidade ?? 3) === c ? 'selected' : ''}>${CRIT_LABEL[c]}</option>`).join('')}</select>
@@ -1077,6 +1103,7 @@ function _salvarMaquina(db, m) {
   const crit = parseInt(document.getElementById('f-crit').value, 10);
   const pnum = parseInt(document.getElementById('f-pnum').value, 10);
   const punid = document.getElementById('f-punid').value;
+  const familiaId = document.getElementById('f-familia').value || null;
 
   if (!nome) { showToast('Informe o nome da Máquina.', 'er'); return; }
   if (!tag)  { showToast('Informe a TAG da Máquina.', 'er'); return; }
@@ -1127,10 +1154,11 @@ function _salvarMaquina(db, m) {
     m.criticidade = crit;
     m.periodicidadeNumero = pnum;
     m.periodicidadeUnidade = punid;
+    m.familiaId = familiaId;
   } else {
     db.maquinas.push({
       id: _genId('MAQ', nome), salaId, nome: _normNome(nome), tag: _normNome(tag),
-      criticidade: crit, periodicidadeNumero: pnum, periodicidadeUnidade: punid,
+      criticidade: crit, periodicidadeNumero: pnum, periodicidadeUnidade: punid, familiaId,
       ativo: true, criadoEm: new Date().toISOString(),
     });
   }
@@ -1139,4 +1167,167 @@ function _salvarMaquina(db, m) {
   closeM('m-edit');
   showToast(m ? 'Máquina atualizada.' : 'Máquina criada.', 'ok');
   render();
+}
+
+// ============================================================
+// FAMÍLIAS DE EQUIPAMENTO + CHECKLIST DE PREVENTIVA (aba nova)
+// ============================================================
+// "Família" = fabricante + tipo (ex: ULMA / Termoformadora). Cada
+// família tem um checklist reutilizável (preventivaTemplates) que
+// qualquer máquina vinculada a ela herda automaticamente na tela de
+// Preventiva (só impressão, ver js/pages/preventiva.js). Antes desta
+// aba, isso só dava pra cadastrar editando mock/db.js na mão.
+
+const AREA_OPTS = ['Mecânico', 'Elétrico'];
+const CRITICIDADE_TPL_LABEL = { A: 'A – Crítica', B: 'B – Importante', C: 'C – Desejável' };
+const PERIODICIDADE_OPTS = ['Diária', 'Semanal', 'Quinzenal', 'Mensal', 'Trimestral', 'Semestral', 'Anual'];
+
+function _renderFamilias() {
+  const root = document.getElementById('pg-at-body');
+  if (!root) return;
+  const db = getDB();
+  const familias = [...(db.familias || [])].sort((a, b) => `${a.fabricante} ${a.tipo}`.localeCompare(`${b.fabricante} ${b.tipo}`, 'pt-BR'));
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-t" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Famílias de Equipamento (${familias.length})</span>
+        <button class="btn btn-sm btn-p" id="btn-nova-familia">+ Nova Família</button>
+      </div>
+      ${familias.length ? familias.map(f => _familiaCardHtml(db, f)).join('') : `
+        <div class="empty"><div class="ei">🔧</div><p>Nenhuma família cadastrada ainda.</p></div>`}
+    </div>`;
+
+  document.getElementById('btn-nova-familia')?.addEventListener('click', () => _abrirFamiliaForm(null));
+  root.querySelectorAll('[data-familia-editar]').forEach(btn =>
+    btn.addEventListener('click', () => _abrirFamiliaForm(btn.dataset.familiaEditar)));
+  root.querySelectorAll('[data-familia-checklist]').forEach(btn =>
+    btn.addEventListener('click', () => _abrirChecklist(btn.dataset.familiaChecklist)));
+  root.querySelectorAll('[data-familia-excluir]').forEach(btn =>
+    btn.addEventListener('click', () => _excluirFamilia(btn.dataset.familiaExcluir)));
+}
+
+function _familiaCardHtml(db, f) {
+  const nTarefas = (db.preventivaTemplates || []).filter(t => t.familiaId === f.id && t.ativo !== false).length;
+  const nMaquinas = (db.maquinas || []).filter(m => m.familiaId === f.id && m.ativo !== false).length;
+  return `
+    <div class="dr" style="align-items:center;justify-content:space-between">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span class="dv" style="font-weight:700">${_esc(f.fabricante)} — ${_esc(f.tipo)}</span>
+        <span style="font-size:12px;color:var(--txt3)">${_esc(f.descricao || '')} · ${nMaquinas} máquina${nMaquinas === 1 ? '' : 's'} vinculada${nMaquinas === 1 ? '' : 's'} · ${nTarefas} tarefa${nTarefas === 1 ? '' : 's'} no checklist</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm btn-gh" data-familia-checklist="${f.id}">📋 Checklist</button>
+        <button class="btn btn-sm btn-gh" data-familia-editar="${f.id}">✎ Editar</button>
+        <button class="btn btn-d" data-familia-excluir="${f.id}">✕</button>
+      </div>
+    </div>`;
+}
+
+function _abrirFamiliaForm(id) {
+  const db = getDB();
+  const f = id ? db.familias.find(x => x.id === id) : null;
+  _setModalWidth(440);
+  document.getElementById('me-t').textContent = f ? `Editar Família — ${f.fabricante} ${f.tipo}` : 'Nova Família de Equipamento';
+  document.getElementById('me-b').innerHTML = `
+    <div class="fg"><label>Fabricante</label><input type="text" id="ff-fab" value="${f ? _escAttr(f.fabricante) : ''}" placeholder="Ex: ULMA"></div>
+    <div class="fg"><label>Tipo de Equipamento</label><input type="text" id="ff-tipo" value="${f ? _escAttr(f.tipo) : ''}" placeholder="Ex: Termoformadora"></div>
+    <div class="fg"><label>Descrição</label><textarea id="ff-desc" placeholder="Opcional">${f ? _esc(f.descricao || '') : ''}</textarea></div>`;
+  document.getElementById('btn-edit-save').onclick = () => {
+    const fabricante = document.getElementById('ff-fab').value.trim();
+    const tipo = document.getElementById('ff-tipo').value.trim();
+    const descricao = document.getElementById('ff-desc').value.trim();
+    if (!fabricante || !tipo) { showToast('Informe fabricante e tipo.', 'er'); return; }
+    const dup = db.familias.some(x => x.id !== id && _normNome(x.fabricante) === _normNome(fabricante) && _normNome(x.tipo) === _normNome(tipo));
+    if (dup) { showToast('Já existe uma família com esse fabricante + tipo.', 'er'); return; }
+    if (f) {
+      Object.assign(f, { fabricante, tipo, descricao });
+    } else {
+      db.familias.push({ id: _genId('FAM', `${fabricante}_${tipo}`), fabricante, tipo, descricao, ativo: true, criadoEm: new Date().toISOString() });
+    }
+    saveDB();
+    closeM('m-edit');
+    showToast(f ? 'Família atualizada.' : 'Família criada.', 'ok');
+    _renderFamilias();
+  };
+  openM('m-edit');
+}
+
+function _excluirFamilia(id) {
+  const db = getDB();
+  const nMaquinas = db.maquinas.filter(m => m.familiaId === id && m.ativo !== false).length;
+  if (nMaquinas > 0) {
+    showToast(`Não dá pra excluir: ${nMaquinas} máquina(s) ainda vinculada(s) a essa família. Troque a família delas primeiro (em Ativos → Editar Máquina).`, 'er');
+    return;
+  }
+  if (!confirm('Excluir esta família e todo o checklist dela?')) return;
+  db.familias = db.familias.filter(f => f.id !== id);
+  db.preventivaTemplates = (db.preventivaTemplates || []).filter(t => t.familiaId !== id);
+  saveDB();
+  showToast('Família excluída.', 'ok');
+  _renderFamilias();
+}
+
+function _abrirChecklist(familiaId) {
+  const db = getDB();
+  const f = db.familias.find(x => x.id === familiaId);
+  if (!f) return;
+  _setModalWidth(560);
+  document.getElementById('me-t').textContent = `Checklist — ${f.fabricante} ${f.tipo}`;
+  _renderChecklistBody(familiaId);
+  document.getElementById('btn-edit-save').onclick = () => closeM('m-edit'); // tudo já salva na hora, botão só fecha
+  openM('m-edit');
+}
+
+function _renderChecklistBody(familiaId) {
+  const db = getDB();
+  const tarefas = (db.preventivaTemplates || []).filter(t => t.familiaId === familiaId).sort((a, b) => a.ordem - b.ordem);
+  document.getElementById('me-b').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+      ${tarefas.length ? tarefas.map(t => `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs)">
+          <span class="badge" style="flex-shrink:0">${t.area}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px">${_esc(t.tarefa)}</div>
+            <div style="font-size:11px;color:var(--txt3)">${t.periodicidade} · Criticidade ${CRITICIDADE_TPL_LABEL[t.criticidade] || t.criticidade}${t.tempoEstimadoMin ? ` · ~${t.tempoEstimadoMin}min` : ''}</div>
+          </div>
+          <button type="button" class="btn btn-d" data-rm-tarefa="${t.id}">✕</button>
+        </div>`).join('') : `<div style="text-align:center;color:var(--txt3);padding:12px;font-size:13px">Nenhuma tarefa ainda.</div>`}
+    </div>
+    <div class="card-t" style="margin-bottom:8px">+ Adicionar Tarefa</div>
+    <div class="fg-row">
+      <div class="fg"><label>Área</label><select id="ft-area">${AREA_OPTS.map(a => `<option>${a}</option>`).join('')}</select></div>
+      <div class="fg"><label>Periodicidade</label><select id="ft-per">${PERIODICIDADE_OPTS.map(p => `<option ${p === 'Mensal' ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
+      <div class="fg"><label>Criticidade</label><select id="ft-crit">${Object.entries(CRITICIDADE_TPL_LABEL).map(([k, v]) => `<option value="${k}" ${k === 'B' ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="fg"><label>Tempo Estimado (min)</label><input type="number" id="ft-tempo" min="1" value="15"></div>
+      <div class="fg fg-full"><label>Tarefa</label><input type="text" id="ft-tarefa" placeholder="Ex: Verificar tensão das correias"></div>
+    </div>
+    <div class="fa" style="border-top:none;padding-top:0">
+      <button type="button" class="btn btn-p" id="btn-add-tarefa">+ Adicionar</button>
+    </div>`;
+
+  document.getElementById('me-b').querySelectorAll('[data-rm-tarefa]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      db.preventivaTemplates = db.preventivaTemplates.filter(t => t.id !== btn.dataset.rmTarefa);
+      saveDB();
+      _renderChecklistBody(familiaId);
+    });
+  });
+  document.getElementById('btn-add-tarefa').addEventListener('click', () => {
+    const area = document.getElementById('ft-area').value;
+    const periodicidade = document.getElementById('ft-per').value;
+    const criticidade = document.getElementById('ft-crit').value;
+    const tempoEstimadoMin = parseInt(document.getElementById('ft-tempo').value) || null;
+    const tarefa = document.getElementById('ft-tarefa').value.trim();
+    if (!tarefa) { showToast('Descreva a tarefa.', 'er'); return; }
+    const ordem = tarefas.filter(t => t.area === area).length + 1;
+    db.preventivaTemplates = db.preventivaTemplates || [];
+    db.preventivaTemplates.push({
+      id: _genId('PT', tarefa), familiaId, area, tarefa, periodicidade,
+      tempoEstimadoMin, criticidade, ordem, ativo: true,
+    });
+    saveDB();
+    showToast('Tarefa adicionada.', 'ok');
+    _renderChecklistBody(familiaId);
+  });
 }

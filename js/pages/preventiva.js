@@ -1,28 +1,25 @@
 // ============================================================
 // SIGMAN v2.0 — pages/preventiva.js
 // ============================================================
-// Portado de sigprod-muffato/js/preventiva.js (V1), adaptado ao
-// modelo de dados do v2: lá o checklist era por "modelo" (texto livre,
-// buscado via Google Apps Script `planos_list`/`planos_get`); aqui
-// usa `familias_equipamento` + `preventiva_templates`, já desenhadas
-// no schema.sql numa sessão anterior mas nunca usadas — ver
-// mock/db.js (`familias`, `preventivaTemplates`, `preventivaExecucoes`).
-//
-// ⚠️ Escopo desta leva: só 3 famílias de exemplo têm checklist
-// cadastrado (Termoformadora ULMA, Embutideira Handtmann, Fatiadora
-// Weber — ver mock/db.js), cobrindo ~13 das 68 máquinas do mock. As
-// tarefas são boas-práticas genéricas de manutenção industrial, não
-// o histórico real de cada máquina — checklists das demais famílias
-// (e revisão destas) ficam pendentes de cadastro (mesma convenção do
-// projeto: mudança estrutural = editar mock/db.js direto, ou uma
-// futura tela de administração de famílias/checklists).
+// Só template de impressão — NÃO salva execução no app. Fluxo real:
+//   1. PCM cria a O.S. Planejada (tipo Preventiva/Inspeção) em
+//      Planejamento (os-planejamento.js).
+//   2. Manutentor vem aqui, escolhe a máquina, IMPRIME o checklist em
+//      branco (baseado na família de equipamento — ver mock/db.js:
+//      familias / preventivaTemplates) e preenche na mão durante o
+//      serviço.
+//   3. De volta ao app, o manutentor dá baixa na O.S. Planejada
+//      (O.S. Planejadas → Concluir), que gera a O.S. correlata em
+//      Executadas — esse é o único registro que fica salvo no banco.
+// Ou seja: esta tela não tem "Salvar", só "Imprimir". Portado de
+// sigprod-muffato/js/preventiva.js (V1), mas sem a parte de gravar
+// preventivaExecucoes — decisão explícita do Tiago nesta sessão.
 // ============================================================
 
-import { getDB, saveDB } from '../api.js?v=20260718a';
-import { CU } from '../auth.js?v=20260718a';
-import { v, sv, fd, today, showToast } from '../utils.js?v=20260718a';
+import { getDB } from '../api.js?v=20260718a';
+import { fd } from '../utils.js?v=20260718a';
 
-let PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] }; // tarefas: [{id,area,tarefa,...}]
+let PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
 let _bound = false;
 
 export function init() {
@@ -32,13 +29,8 @@ export function init() {
     _bound = true;
     document.getElementById('prev-sala')?.addEventListener('change', _populateMaquinas);
     document.getElementById('prev-maq')?.addEventListener('change', _carregarChecklist);
-    document.getElementById('btn-prev-save')?.addEventListener('click', _salvar);
     document.getElementById('btn-prev-print')?.addEventListener('click', _imprimir);
   }
-  sv('prev-dt', '');
-  sv('prev-hi', '');
-  sv('prev-hf', '');
-  if (CU?.perfil !== 'producao') sv('prev-mn', CU?.nome || '');
   document.getElementById('prev-body').innerHTML = '';
   PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
 }
@@ -57,7 +49,7 @@ function _populateMaquinas() {
   const db  = getDB();
   const sel = document.getElementById('prev-maq');
   if (!sel) return;
-  const salaNome = v('prev-sala');
+  const salaNome = document.getElementById('prev-sala')?.value || '';
   const salaIds = salaNome ? db.salas.filter(s => s.nome === salaNome).map(s => s.id) : null;
   const maqs = (db.maquinas || [])
     .filter(m => m.ativo !== false && (!salaIds || salaIds.includes(m.salaId)))
@@ -71,7 +63,7 @@ function _populateMaquinas() {
 function _carregarChecklist() {
   const db   = getDB();
   const body = document.getElementById('prev-body');
-  const maqId = v('prev-maq');
+  const maqId = document.getElementById('prev-maq')?.value;
   if (!maqId) { body.innerHTML = ''; PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] }; return; }
 
   const maq = db.maquinas.find(m => m.id === maqId);
@@ -80,7 +72,7 @@ function _carregarChecklist() {
   if (!maq.familiaId) {
     body.innerHTML = `<div class="card" style="padding:16px;text-align:center;color:var(--txt3)">
       Esta máquina ainda não tem família de equipamento cadastrada (sem checklist de preventiva vinculado).<br>
-      <span style="font-size:12px">Cadastro de famílias/checklists é feito direto em <code>mock/db.js</code> por enquanto.</span>
+      <span style="font-size:12px">Cadastre a família em Ativos → Famílias de Equipamento.</span>
     </div>`;
     PLANO_ATUAL = { maquina: maq, familia: null, tarefas: [] };
     return;
@@ -102,69 +94,20 @@ function _carregarChecklist() {
   const grupos = {};
   tarefas.forEach(t => { (grupos[t.area] = grupos[t.area] || []).push(t); });
 
-  body.innerHTML = Object.entries(grupos).map(([area, ts]) => `
-    <div class="card" style="margin-bottom:10px">
-      <div class="card-t">${area}</div>
-      ${ts.map(t => `
-        <div class="prev-row" data-id="${t.id}" style="display:grid;grid-template-columns:1fr auto 1.5fr;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--bord)">
-          <div style="font-size:15px">${t.tarefa}</div>
-          <div style="display:flex;gap:5px">
-            <button type="button" class="iok" onclick="window._prevSetStatus('${t.id}','ok',this)">OK</button>
-            <button type="button" class="inok" onclick="window._prevSetStatus('${t.id}','nok',this)">NOK</button>
-            <button type="button" class="ina" onclick="window._prevSetStatus('${t.id}','na',this)">NA</button>
-          </div>
-          <div><input type="text" placeholder="Materiais / Observações" id="pvobs-${t.id}"
-            style="background:var(--inp);border:1px solid var(--bord);border-radius:4px;color:var(--txt);font-size:14px;padding:4px 8px;width:100%;outline:none"></div>
-          <input type="hidden" id="pvst-${t.id}" value="">
-        </div>`).join('')}
-    </div>`).join('');
-  window._prevSetStatus = _setStatus;
-}
-
-function _setStatus(taskId, status, btn) {
-  sv('pvst-' + taskId, status);
-  const row = btn.closest('.prev-row');
-  row.querySelectorAll('.iok,.inok,.ina').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-}
-
-function _salvar() {
-  const db = getDB();
-  const { maquina, tarefas } = PLANO_ATUAL;
-  const data = v('prev-dt'), manut = v('prev-mn').trim(), per = v('prev-periodo');
-  const horaIni = v('prev-hi'), horaFim = v('prev-hf');
-
-  if (!maquina || !data || !manut) { showToast('Selecione máquina, data e manutentor.', 'er'); return; }
-  if (!tarefas.length) { showToast('Esta máquina não tem checklist carregado.', 'er'); return; }
-
-  const agora = new Date().toISOString();
-  let algumPreenchido = false;
-
-  db.preventivaExecucoes = db.preventivaExecucoes || [];
-  tarefas.forEach(t => {
-    const status = v('pvst-' + t.id);
-    if (!status) return;
-    algumPreenchido = true;
-    db.preventivaExecucoes.push({
-      id: crypto.randomUUID(), maquinaId: maquina.id, templateId: t.id,
-      tarefa: t.tarefa, area: t.area, periodicidade: per,
-      manutentorLogin: CU?.login || '', manutentorNome: manut,
-      dataExecucao: data, horaInicio: horaIni, horaFim: horaFim,
-      materiais: v('pvobs-' + t.id), status, observacoes: '', criadoEm: agora,
-    });
-  });
-
-  if (!algumPreenchido) { showToast('Marque OK/NOK/NA em pelo menos uma tarefa.', 'er'); return; }
-  saveDB();
-  showToast('Preventiva salva!', 'ok');
+  // Só pré-visualização — sem botões OK/NOK/NA, sem input, nada disso
+  // fica salvo no banco. O preenchimento de verdade é na folha impressa.
+  body.innerHTML = `<div class="card"><div class="card-t">${familia.fabricante} ${familia.tipo} — pré-visualização do checklist</div>` +
+    Object.entries(grupos).map(([area, ts]) => `
+      <div style="margin-bottom:10px">
+        <div style="font-family:var(--fw);font-size:12px;color:var(--txt3);font-variant:small-caps;margin-bottom:4px">${area}</div>
+        ${ts.map(t => `<div style="font-size:14px;padding:5px 0;border-bottom:1px solid var(--bord)">${t.tarefa}</div>`).join('')}
+      </div>`).join('') + `</div>`;
 }
 
 function _imprimir() {
   const { maquina, familia, tarefas } = PLANO_ATUAL;
-  if (!maquina || !tarefas.length) { showToast('Carregue o checklist de uma máquina antes de imprimir.', 'er'); return; }
+  if (!maquina || !tarefas.length) { alert('Selecione uma máquina com checklist cadastrado antes de imprimir.'); return; }
 
-  const data = v('prev-dt') || '___/___/____', manut = v('prev-mn') || '_______________', per = v('prev-periodo') || 'Mensal';
-  const horaIni = v('prev-hi') || '___:___', horaFim = v('prev-hf') || '___:___';
   const grupos = {};
   tarefas.forEach(t => { (grupos[t.area] = grupos[t.area] || []).push(t); });
 
@@ -195,11 +138,11 @@ td{padding:5px 7px;border:1px solid #ddd}
 <div class="info-grid">
   <div class="info-box"><div class="info-label">Máquina</div><div class="info-val">${maquina.nome}</div></div>
   <div class="info-box"><div class="info-label">Tag</div><div class="info-val">${maquina.tag || '___'}</div></div>
-  <div class="info-box"><div class="info-label">Data</div><div class="info-val">${data === '___/___/____' ? data : fd(data)}</div></div>
-  <div class="info-box"><div class="info-label">Periodicidade</div><div class="info-val">${per}</div></div>
-  <div class="info-box" style="grid-column:span 2"><div class="info-label">Manutentor</div><div class="info-val">${manut}</div></div>
-  <div class="info-box"><div class="info-label">Hora Início</div><div class="info-val">${horaIni}</div></div>
-  <div class="info-box"><div class="info-label">Hora Fim</div><div class="info-val">${horaFim}</div></div>
+  <div class="info-box"><div class="info-label">Data</div><div class="info-val">___/___/____</div></div>
+  <div class="info-box"><div class="info-label">Periodicidade</div><div class="info-val">_______________</div></div>
+  <div class="info-box" style="grid-column:span 2"><div class="info-label">Manutentor</div><div class="info-val">_______________________________</div></div>
+  <div class="info-box"><div class="info-label">Hora Início</div><div class="info-val">___:___</div></div>
+  <div class="info-box"><div class="info-label">Hora Fim</div><div class="info-val">___:___</div></div>
 </div>
 ${Object.entries(grupos).map(([area, ts]) => `
 <h2>${area}</h2>
@@ -221,3 +164,4 @@ ${ts.map(t => `<tr>
 <script>window.print();<\/script></body></html>`);
   win.document.close();
 }
+

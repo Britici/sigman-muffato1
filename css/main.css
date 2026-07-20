@@ -194,6 +194,9 @@ input[type=time]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.65
 
 /* CARD */
 .card{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:18px;margin-bottom:14px}
+.at-tab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--txt3);font-family:var(--fw);font-size:13px;font-weight:700;font-variant:small-caps;letter-spacing:.5px;padding:10px 4px;cursor:pointer;transition:color .15s,border-color .15s}
+.at-tab:hover{color:var(--txt2)}
+.at-tab.on{color:var(--red);border-bottom-color:var(--red)}
 .card-t{font-family:var(--fw);font-size:13px;font-weight:700;color:var(--txt3);font-variant:small-caps;letter-spacing:.8px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .card-t::before{content:'';width:3px;height:14px;background:var(--red);border-radius:2px;flex-shrink:0}
 
