@@ -17,7 +17,7 @@ const ROUTES = {
   'os-planejadas':      { title:'O.S. Planejadas',           pageId:'pg-planejadas'          },
   'os-planejamento':    { title:'PCM — Planejamento de O.S.',pageId:'pg-planejamento'        },
   'inspecao':           { title:'Inspeção Diária',           pageId:'pg-inspecao'            },
-  'inspecao-tmpl':      { title:'PCM — Inspeção de Rota',   pageId:'pg-inspecao-tmpl'       },
+  'inspecao-tmpl':      { title:'PCM — Checklist de Inspeção', pageId:'pg-inspecao-tmpl'       },
   'preventiva':         { title:'PCM — Manutenção Preventiva', pageId:'pg-preventiva'        },
   'analise-causa-raiz': { title:'PCM — Análise de Causa Raiz', pageId:'pg-analise-causa-raiz'},
   'ativos':             { title:'Ativos',                    pageId:'pg-ativos'              },
