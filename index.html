@@ -401,17 +401,12 @@
           <div class="fg-row">
             <div class="fg">
               <label>Tipo de Documento</label>
-              <div style="display:flex;gap:14px;align-items:center;height:38px">
-                <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="prev-tipo" value="preventiva" checked> 🔩 Preventiva
-                </label>
-                <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
-                  <input type="radio" name="prev-tipo" value="inspecao"> 📄 Inspeção
-                </label>
-              </div>
+              <select id="prev-tipo">
+                <option value="preventiva" selected>🔩 Manutenção Preventiva</option>
+                <option value="inspecao">📄 Inspeção</option>
+              </select>
             </div>
-          </div>
-          <div class="fg-row">
+            <div class="fg"><label>Ambiente</label><select id="prev-amb"><option value="">Todos os Ambientes</option></select></div>
             <div class="fg"><label>Sala / Local</label><select id="prev-sala"><option value="">Todas as Salas</option></select></div>
             <div class="fg"><label>Máquina / Ativo</label><select id="prev-maq"><option value="">Selecione...</option></select></div>
           </div>
