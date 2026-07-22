@@ -1,20 +1,7 @@
 // ============================================================
 // SIGMAN v2.0 — pages/preventiva.js
-// ============================================================
-// Só template de impressão — NÃO salva execução no app. Fluxo real:
-//   1. PCM cria a O.S. Planejada (tipo Preventiva/Inspeção) em
-//      Planejamento (os-planejamento.js).
-//   2. Manutentor vem aqui, escolhe MÁQUINA + TIPO (Preventiva ou
-//      Inspeção) e IMPRIME o checklist em branco (baseado na família
-//      de equipamento — ver mock/db.js: familias / preventivaTemplates)
-//      e preenche na mão durante o serviço.
-//   3. De volta ao app, o manutentor dá baixa na O.S. Planejada
-//      (O.S. Planejadas → Concluir), que gera a O.S. correlata em
-//      Executadas — esse é o único registro que fica salvo no banco.
-// Ou seja: esta tela não tem "Salvar", só "Imprimir". Fundida a
-// partir de preventiva.js + inspecao-tmpl.js (eram duas telas quase
-// idênticas, só cabeçalho do PDF mudava) — Tiago pediu unificar em
-// um único menu com opção de tipo de documento na impressão.
+// Fundida: Preventiva + Inspeção (só impressão, sem Salvar)
+// Cascata: Tipo → Ambiente → Sala → Máquina
 // ============================================================
 
 import { getDB } from '../api.js?v=20260722';
@@ -25,41 +12,65 @@ const DOCS = {
 };
 
 let PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
-let TIPO_ATUAL = 'preventiva';
 let _bound = false;
 
 export function init() {
+  _populateAmbientes();
   _populateSalas();
   _populateMaquinas();
   if (!_bound) {
     _bound = true;
+    document.getElementById('prev-amb')?.addEventListener('change',  _onAmbChange);
     document.getElementById('prev-sala')?.addEventListener('change', _populateMaquinas);
-    document.getElementById('prev-maq')?.addEventListener('change', _carregarChecklist);
+    document.getElementById('prev-maq')?.addEventListener('change',  _carregarChecklist);
     document.getElementById('btn-prev-print')?.addEventListener('click', _imprimir);
-    document.querySelectorAll('input[name="prev-tipo"]').forEach(r => {
-      r.addEventListener('change', e => { TIPO_ATUAL = e.target.value; });
-    });
   }
   document.getElementById('prev-body').innerHTML = '';
   PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
 }
 
-function _populateSalas() {
+function _populateAmbientes() {
   const db  = getDB();
-  const sel = document.getElementById('prev-sala');
+  const sel = document.getElementById('prev-amb');
   if (!sel) return;
-  const cur = sel.value;
-  const nomes = [...new Set((db.salas || []).map(s => s.nome))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  sel.innerHTML = '<option value="">Todas as Salas</option>' + nomes.map(s => `<option value="${s}">${s}</option>`).join('');
-  if (cur) sel.value = cur;
+  const ambs = (db.ambientes || []).filter(a => a.ativo !== false)
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  sel.innerHTML = '<option value="">Todos os Ambientes</option>' +
+    ambs.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+}
+
+function _onAmbChange() {
+  _populateSalas();
+  _populateMaquinas();
+  document.getElementById('prev-body').innerHTML = '';
+  PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
+}
+
+function _populateSalas() {
+  const db    = getDB();
+  const sel   = document.getElementById('prev-sala');
+  if (!sel) return;
+  const ambId = document.getElementById('prev-amb')?.value || '';
+  const salas = (db.salas || [])
+    .filter(s => s.ativo !== false && (!ambId || s.ambienteId === ambId))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  sel.innerHTML = '<option value="">Todas as Salas</option>' +
+    salas.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
 }
 
 function _populateMaquinas() {
-  const db  = getDB();
-  const sel = document.getElementById('prev-maq');
+  const db    = getDB();
+  const sel   = document.getElementById('prev-maq');
   if (!sel) return;
-  const salaNome = document.getElementById('prev-sala')?.value || '';
-  const salaIds = salaNome ? db.salas.filter(s => s.nome === salaNome).map(s => s.id) : null;
+  const salaId = document.getElementById('prev-sala')?.value || '';
+  const ambId  = document.getElementById('prev-amb')?.value  || '';
+  // sem sala selecionada: filtra por ambiente se houver, senão tudo
+  let salaIds = null;
+  if (salaId) {
+    salaIds = [salaId];
+  } else if (ambId) {
+    salaIds = (db.salas || []).filter(s => s.ambienteId === ambId).map(s => s.id);
+  }
   const maqs = (db.maquinas || [])
     .filter(m => m.ativo !== false && (!salaIds || salaIds.includes(m.salaId)))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -81,11 +92,12 @@ function _carregarChecklist() {
   if (!maq.familiaId) {
     body.innerHTML = `<div class="card" style="padding:16px;text-align:center;color:var(--txt3)">
       Esta máquina ainda não tem família de equipamento cadastrada (sem checklist vinculado).<br>
-      <span style="font-size:12px">Cadastre a família em Ativos → Famílias de Equipamento.</span>
+      <span style="font-size:12px">Cadastre em Ativos → Famílias de Equipamento.</span>
     </div>`;
     PLANO_ATUAL = { maquina: maq, familia: null, tarefas: [] };
     return;
   }
+
   const familia = db.familias.find(f => f.id === maq.familiaId);
   const tarefas = (db.preventivaTemplates || [])
     .filter(t => t.familiaId === maq.familiaId && t.ativo !== false)
@@ -93,7 +105,7 @@ function _carregarChecklist() {
 
   if (!tarefas.length) {
     body.innerHTML = `<div class="card" style="padding:16px;text-align:center;color:var(--txt3)">
-      Família <b>${familia?.fabricante} ${familia?.tipo}</b> não tem tarefas de checklist cadastradas ainda.
+      Família <b>${familia?.fabricante} ${familia?.tipo}</b> sem tarefas cadastradas.
     </div>`;
     PLANO_ATUAL = { maquina: maq, familia, tarefas: [] };
     return;
@@ -103,8 +115,6 @@ function _carregarChecklist() {
   const grupos = {};
   tarefas.forEach(t => { (grupos[t.area] = grupos[t.area] || []).push(t); });
 
-  // Só pré-visualização — sem botões OK/NOK/NA, sem input, nada disso
-  // fica salvo no banco. O preenchimento de verdade é na folha impressa.
   body.innerHTML = `<div class="card"><div class="card-t">${familia.fabricante} ${familia.tipo} — pré-visualização do checklist</div>` +
     Object.entries(grupos).map(([area, ts]) => `
       <div style="margin-bottom:10px">
@@ -117,7 +127,8 @@ function _imprimir() {
   const { maquina, familia, tarefas } = PLANO_ATUAL;
   if (!maquina || !tarefas.length) { alert('Selecione uma máquina com checklist cadastrado antes de imprimir.'); return; }
 
-  const { titulo, doc } = DOCS[TIPO_ATUAL] || DOCS.preventiva;
+  const tipo = document.getElementById('prev-tipo')?.value || 'preventiva';
+  const { titulo, doc } = DOCS[tipo] || DOCS.preventiva;
   const grupos = {};
   tarefas.forEach(t => { (grupos[t.area] = grupos[t.area] || []).push(t); });
 
