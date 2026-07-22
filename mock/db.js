@@ -303,5 +303,14 @@ export function getMockDB() {
     inspecoes: [],
     racs:      [],
     historico: [],
+
+    // ── Ordens de Compra ──────────────────────────────────────
+    // status: 'em_andamento' | 'concluida' | 'orcamento_recusado'
+    // etapas[n]: null (não feita) | { data:'YYYY-MM-DD', obs:'', foto:'' }
+    // etapas[2] extra: valorOrcamento (number), orcamentoRecusado (bool)
+    // etapas[3] extra: numeroRC (string)
+    // etapas[7] extra: numeroNF (string) → ao salvar seta status='concluida'
+    ordensCompra: [],
+    ocC: 1,
   };
 }

@@ -42,6 +42,8 @@ export function saveDB() {
       osC:  _db.osC,
       plC:  _db.plC,
       racC: _db.racC,
+      ordensCompra: _db.ordensCompra,
+      ocC:  _db.ocC,
     }));
   } catch (e) { console.warn('[saveDB]', e); }
 }
@@ -87,6 +89,13 @@ export function _genRAC() {
   const db = getDB();
   const num = 'RAC-' + String(db.racC).padStart(4, '0');
   db.racC++;
+  return num;
+}
+
+export function _genOC() {
+  const db = getDB();
+  const num = 'OC-' + String(db.ocC).padStart(4, '0');
+  db.ocC++;
   return num;
 }
 

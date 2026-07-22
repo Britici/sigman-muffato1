@@ -414,6 +414,52 @@
         <div id="prev-body"></div>
       </div>
 
+      <!-- ══ SOLICITAÇÃO DE ORDEM DE COMPRA ══ -->
+      <div class="pg" id="pg-oc-solicitacao">
+        <div class="ph">
+          <div class="pt"><small>PCM · Compras</small>Solicitar Ordem de Compra</div>
+        </div>
+        <div id="ocs-body"></div>
+      </div>
+
+      <!-- ══ ACOMPANHAMENTO DE ORDENS DE COMPRA ══ -->
+      <div class="pg" id="pg-oc-acompanhamento">
+        <div class="ph">
+          <div class="pt"><small>PCM · Compras</small>Acompanhamento de Ordens de Compra</div>
+        </div>
+        <div id="oca-wrap">
+          <!-- Filtros -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+            <select id="oca-fil-pri" style="background:var(--surf2);border:1px solid var(--bord);color:var(--txt1);border-radius:7px;padding:7px 12px;font-size:13px;outline:none;cursor:pointer">
+              <option value="">Todas as prioridades</option>
+              <option value="1">1 – Emergencial</option>
+              <option value="2">2 – Urgente</option>
+              <option value="3">3 – Médio</option>
+              <option value="4">4 – Baixo</option>
+            </select>
+            <select id="oca-fil-sala" style="background:var(--surf2);border:1px solid var(--bord);color:var(--txt1);border-radius:7px;padding:7px 12px;font-size:13px;outline:none;cursor:pointer">
+              <option value="">Todas as salas</option>
+            </select>
+            <input id="oca-search" type="text" placeholder="Buscar por ID, descrição..." style="background:var(--surf2);border:1px solid var(--bord);color:var(--txt1);border-radius:7px;padding:7px 12px;font-size:13px;outline:none;min-width:200px">
+          </div>
+          <!-- Abas -->
+          <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--bord)">
+            <div id="oca-tab-andamento" class="oca-tab ativo" style="padding:10px 22px;font-size:14px;font-weight:600;color:var(--txt1);cursor:pointer;border-bottom:2px solid #C41230;margin-bottom:-2px;user-select:none">
+              Em Andamento <span id="oca-cnt-andamento" style="background:#C41230;color:#fff;border-radius:10px;font-size:11px;min-width:20px;height:18px;padding:0 6px;margin-left:7px;display:inline-flex;align-items:center;justify-content:center">0</span>
+            </div>
+            <div id="oca-tab-concluida" class="oca-tab" style="padding:10px 22px;font-size:14px;font-weight:600;color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;user-select:none">
+              Concluídas <span id="oca-cnt-concluida" style="background:var(--bord);color:var(--txt2);border-radius:10px;font-size:11px;min-width:20px;height:18px;padding:0 6px;margin-left:7px;display:inline-flex;align-items:center;justify-content:center">0</span>
+            </div>
+          </div>
+          <!-- Lista -->
+          <div id="oca-lista"></div>
+        </div>
+        <!-- Lightbox compartilhado -->
+        <div id="oca-lightbox" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:none;align-items:center;justify-content:center;cursor:zoom-out" onclick="this.style.display='none'">
+          <img style="max-width:92vw;max-height:90vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)" src="" alt="">
+        </div>
+      </div>
+
       <!-- ══ ANÁLISE DE CAUSA RAIZ ══ -->
       <div class="pg" id="pg-analise-causa-raiz">
         <div class="ph">

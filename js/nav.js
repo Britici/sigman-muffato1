@@ -17,6 +17,8 @@ const NAV = [
       { id:'os-planejamento',    ic:'📋', lbl:'Planejamento de O.S.'   },
       { id:'analise-causa-raiz', ic:'🔴', lbl:'Análise de Causa Raiz'  },
       { id:'preventiva',         ic:'🔩', lbl:'Manutenção Preventiva'  },
+      { id:'oc-solicitacao',     ic:'🛒', lbl:'Solicitar Compra'       },
+      { id:'oc-acompanhamento',  ic:'📦', lbl:'Acompanhamento O.C.'    },
   ]},
   { id:'ativos',          ic:'🏭', lbl:'Ativos'                  },
   { id:'usuarios',        ic:'👥', lbl:'Usuários'                },

@@ -17,12 +17,12 @@ export const ROLES = {
   admin: {
     label: 'Administrador',
     menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','ativos','usuarios'],
-    pcmSub: ['os-planejamento','analise-causa-raiz','preventiva'],
+    pcmSub: ['os-planejamento','analise-causa-raiz','preventiva','oc-solicitacao','oc-acompanhamento'],
   },
   pcm: {
     label: 'PCM',
     menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','ativos'],
-    pcmSub: ['os-planejamento','analise-causa-raiz','preventiva'],
+    pcmSub: ['os-planejamento','analise-causa-raiz','preventiva','oc-solicitacao','oc-acompanhamento'],
   },
   manutencao: {
     label: 'Manutenção',
