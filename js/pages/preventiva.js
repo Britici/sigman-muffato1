@@ -4,22 +4,28 @@
 // Só template de impressão — NÃO salva execução no app. Fluxo real:
 //   1. PCM cria a O.S. Planejada (tipo Preventiva/Inspeção) em
 //      Planejamento (os-planejamento.js).
-//   2. Manutentor vem aqui, escolhe a máquina, IMPRIME o checklist em
-//      branco (baseado na família de equipamento — ver mock/db.js:
-//      familias / preventivaTemplates) e preenche na mão durante o
-//      serviço.
+//   2. Manutentor vem aqui, escolhe MÁQUINA + TIPO (Preventiva ou
+//      Inspeção) e IMPRIME o checklist em branco (baseado na família
+//      de equipamento — ver mock/db.js: familias / preventivaTemplates)
+//      e preenche na mão durante o serviço.
 //   3. De volta ao app, o manutentor dá baixa na O.S. Planejada
 //      (O.S. Planejadas → Concluir), que gera a O.S. correlata em
 //      Executadas — esse é o único registro que fica salvo no banco.
-// Ou seja: esta tela não tem "Salvar", só "Imprimir". Portado de
-// sigprod-muffato/js/preventiva.js (V1), mas sem a parte de gravar
-// preventivaExecucoes — decisão explícita do Tiago nesta sessão.
+// Ou seja: esta tela não tem "Salvar", só "Imprimir". Fundida a
+// partir de preventiva.js + inspecao-tmpl.js (eram duas telas quase
+// idênticas, só cabeçalho do PDF mudava) — Tiago pediu unificar em
+// um único menu com opção de tipo de documento na impressão.
 // ============================================================
 
-import { getDB } from '../api.js?v=20260718a';
-import { fd } from '../utils.js?v=20260718a';
+import { getDB } from '../api.js?v=20260722';
+
+const DOCS = {
+  preventiva: { titulo: 'ORDEM DE MANUTENÇÃO PREVENTIVA', doc: 'SIGMAN-PREV' },
+  inspecao:   { titulo: 'ORDEM DE INSPEÇÃO',              doc: 'SIGMAN-INSP' },
+};
 
 let PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
+let TIPO_ATUAL = 'preventiva';
 let _bound = false;
 
 export function init() {
@@ -30,6 +36,9 @@ export function init() {
     document.getElementById('prev-sala')?.addEventListener('change', _populateMaquinas);
     document.getElementById('prev-maq')?.addEventListener('change', _carregarChecklist);
     document.getElementById('btn-prev-print')?.addEventListener('click', _imprimir);
+    document.querySelectorAll('input[name="prev-tipo"]').forEach(r => {
+      r.addEventListener('change', e => { TIPO_ATUAL = e.target.value; });
+    });
   }
   document.getElementById('prev-body').innerHTML = '';
   PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
@@ -71,7 +80,7 @@ function _carregarChecklist() {
 
   if (!maq.familiaId) {
     body.innerHTML = `<div class="card" style="padding:16px;text-align:center;color:var(--txt3)">
-      Esta máquina ainda não tem família de equipamento cadastrada (sem checklist de preventiva vinculado).<br>
+      Esta máquina ainda não tem família de equipamento cadastrada (sem checklist vinculado).<br>
       <span style="font-size:12px">Cadastre a família em Ativos → Famílias de Equipamento.</span>
     </div>`;
     PLANO_ATUAL = { maquina: maq, familia: null, tarefas: [] };
@@ -108,12 +117,13 @@ function _imprimir() {
   const { maquina, familia, tarefas } = PLANO_ATUAL;
   if (!maquina || !tarefas.length) { alert('Selecione uma máquina com checklist cadastrado antes de imprimir.'); return; }
 
+  const { titulo, doc } = DOCS[TIPO_ATUAL] || DOCS.preventiva;
   const grupos = {};
   tarefas.forEach(t => { (grupos[t.area] = grupos[t.area] || []).push(t); });
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>ORDEM DE MANUTENÇÃO PREVENTIVA</title>
+<title>${titulo}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:15mm}
 h1{font-size:17px;text-align:center;color:#C41230;margin-bottom:4px}
@@ -132,8 +142,8 @@ td{padding:5px 7px;border:1px solid #ddd}
 </style></head><body>
 <div class="header">
   <div><b>MUFFATO FOODS</b><br>Gestão de Manutenção — PCM</div>
-  <div><h1>ORDEM DE MANUTENÇÃO PREVENTIVA</h1></div>
-  <div style="text-align:right;font-size:11px">Doc: SIGMAN-PREV<br>Rev: 02</div>
+  <div><h1>${titulo}</h1></div>
+  <div style="text-align:right;font-size:11px">Doc: ${doc}<br>Rev: 02</div>
 </div>
 <div class="info-grid">
   <div class="info-box"><div class="info-label">Máquina</div><div class="info-val">${maquina.nome}</div></div>
@@ -156,6 +166,10 @@ ${ts.map(t => `<tr>
   <td></td>
 </tr>`).join('')}
 </table>`).join('')}
+<h2>Observações</h2>
+<div style="border:1px solid #ccc;border-radius:3px;padding:8px 10px">
+  ${Array.from({length:5}).map(() => `<div style="border-bottom:1px solid #ccc;height:22px"></div>`).join('')}
+</div>
 <div style="display:flex;justify-content:space-between;margin-top:15px">
   <div><div class="assinatura">Assinatura do Manutentor</div></div>
   <div><div class="assinatura">Aprovação do Supervisor</div></div>
@@ -164,4 +178,3 @@ ${ts.map(t => `<tr>
 <script>window.print();<\/script></body></html>`);
   win.document.close();
 }
-

@@ -16,7 +16,6 @@ const NAV = [
   { id:'pcm', ic:'📋', lbl:'PCM', sub:[
       { id:'os-planejamento',    ic:'📋', lbl:'Planejamento de O.S.'   },
       { id:'analise-causa-raiz', ic:'🔴', lbl:'Análise de Causa Raiz'  },
-      { id:'inspecao-tmpl',      ic:'📄', lbl:'Inspeção de Rota'       },
       { id:'preventiva',         ic:'🔩', lbl:'Manutenção Preventiva'  },
   ]},
   { id:'ativos',          ic:'🏭', lbl:'Ativos'                  },

@@ -17,12 +17,12 @@ export const ROLES = {
   admin: {
     label: 'Administrador',
     menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','ativos','usuarios'],
-    pcmSub: ['os-planejamento','analise-causa-raiz','inspecao-tmpl','preventiva'],
+    pcmSub: ['os-planejamento','analise-causa-raiz','preventiva'],
   },
   pcm: {
     label: 'PCM',
     menus: ['dashboard','os-planejadas','os-executadas','os-abertura','inspecao','pcm','ativos'],
-    pcmSub: ['os-planejamento','analise-causa-raiz','inspecao-tmpl','preventiva'],
+    pcmSub: ['os-planejamento','analise-causa-raiz','preventiva'],
   },
   manutencao: {
     label: 'Manutenção',
@@ -223,7 +223,7 @@ async function enterApp() {
   // <select> de usuário real) — cada página cuida do próprio pré-fill
   // (por login, não por nome) depois de popular as opções.
   if (CU.perfil !== 'producao') {
-    ['insp-mn','insp-tmpl-mn','prev-mn'].forEach(id => sv(id, CU.nome));
+    ['insp-mn','prev-mn'].forEach(id => sv(id, CU.nome));
   }
 
   buildNav();
