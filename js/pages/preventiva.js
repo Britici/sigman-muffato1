@@ -8,7 +8,7 @@ import { getDB } from '../api.js?v=20260722';
 
 const DOCS = {
   preventiva: { titulo: 'ORDEM DE MANUTENÇÃO PREVENTIVA', doc: 'SIGMAN-PREV' },
-  inspecao:   { titulo: 'ORDEM DE INSPEÇÃO',              doc: 'SIGMAN-INSP' },
+  inspecao:   { titulo: 'ORDEM DE INSPEÇÃO DE EQUIPAMENTO', doc: 'SIGMAN-INSP' },
 };
 
 let PLANO_ATUAL = { maquina: null, familia: null, tarefas: [] };
