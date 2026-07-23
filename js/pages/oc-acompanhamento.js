@@ -39,7 +39,7 @@ export function init() {
     _bound = true;
     document.getElementById('oca-tab-andamento')?.addEventListener('click', () => _setAba('em_andamento'));
     document.getElementById('oca-tab-concluida')?.addEventListener('click', () => _setAba('concluida'));
-    document.getElementById('oca-fil-pri')?.addEventListener('change',  _renderLista);
+    document.getElementById('oca-fil-pri')?.addEventListener('change',  () => { _renderTabelaPrazos(); _renderLista(); });
     document.getElementById('oca-fil-sala')?.addEventListener('change', _renderLista);
     document.getElementById('oca-search')?.addEventListener('input',    _renderLista);
     document.getElementById('oca-prazos-toggle')?.addEventListener('click', _toggleTabelaPrazos);
@@ -60,6 +60,8 @@ function _toggleTabelaPrazos() {
   arrow.textContent  = isOpen ? '▼ clique para expandir' : '▲ clique para recolher';
 }
 
+let _prazoSortDir = null; // null | 'asc' | 'desc'
+
 function _renderTabelaPrazos() {
   const body = document.getElementById('oca-prazos-body');
   if (!body) return;
@@ -74,21 +76,35 @@ function _renderTabelaPrazos() {
     { idx: 7, label: '7) Lançamento NF'   },
   ];
 
-  const rows = ['1', '2', '3', '4'].map(pri => {
+  const filPri = document.getElementById('oca-fil-pri')?.value || '';
+
+  let prioridades = ['1', '2', '3', '4'].map(pri => ({
+    pri,
+    total: cols.filter(c => c.idx !== 6).reduce((sum, c) => sum + _prazoEtapa(pri, c.idx), 0),
+  }));
+
+  if (_prazoSortDir) {
+    prioridades.sort((a, b) => _prazoSortDir === 'asc' ? a.total - b.total : b.total - a.total);
+  }
+
+  const rows = prioridades.map(({ pri, total }, i) => {
+    const emDestaque = filPri && filPri === pri;
+    const zebraBg = i % 2 === 1 ? 'var(--surf)' : 'transparent';
     const cells = cols.map(c => {
       const dias = _prazoEtapa(pri, c.idx);
       const txt  = dias === 0 ? '0 dias' : `Até ${dias} dias`;
       return `<td style="padding:9px 12px;text-align:center;font-size:13px;${c.destaque ? 'color:#ef4444;font-weight:600' : 'color:var(--txt2)'}">${txt}</td>`;
     }).join('');
-    const total = cols.filter(c => c.idx !== 6).reduce((sum, c) => sum + _prazoEtapa(pri, c.idx), 0);
-    return `<tr style="border-top:1px solid var(--bord)">
+    return `<tr style="border-top:1px solid var(--bord);background:${emDestaque ? 'rgba(196,18,48,.10)' : zebraBg};${emDestaque ? 'box-shadow:inset 3px 0 0 #C41230' : ''}">
       <td style="padding:9px 12px;text-align:center">
         <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${PRI_COR[pri]};color:#fff;font-size:12px;font-weight:700">${pri}</span>
       </td>
       ${cells}
-      <td style="padding:9px 12px;text-align:center;font-size:13px;font-weight:700;color:var(--txt1)">${total} dias</td>
+      <td style="padding:9px 12px;text-align:center;font-size:13px;font-weight:700;color:${emDestaque ? '#fca5a5' : 'var(--txt1)'}">${total} dias</td>
     </tr>`;
   }).join('');
+
+  const arrowSort = _prazoSortDir === 'asc' ? '▲' : _prazoSortDir === 'desc' ? '▼' : '↕';
 
   body.innerHTML = `
   <div style="overflow-x:auto">
@@ -96,13 +112,19 @@ function _renderTabelaPrazos() {
       <thead>
         <tr>
           <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em">#</th>
-          ${cols.map(c => `<th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">${c.label}</th>`).join('')}
-          <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em">Tempo Total</th>
+          ${cols.map(c => `<th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap" ${c.destaque ? `title="Cumulativa: soma das etapas 1 a 5, não é somada de novo no Tempo Total"` : ''}>${c.label}${c.destaque ? ' 🛈' : ''}</th>`).join('')}
+          <th id="oca-prazos-sort" style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;user-select:none;white-space:nowrap">Tempo Total <span style="font-size:10px">${arrowSort}</span></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
-  </div>`;
+  </div>
+  <div style="font-size:11px;color:var(--txt3);margin-top:8px">🛈 A coluna <b>Previsão Entrega</b> é cumulativa (soma das etapas 1 a 5) — por isso não é somada de novo no Tempo Total.</div>`;
+
+  document.getElementById('oca-prazos-sort')?.addEventListener('click', () => {
+    _prazoSortDir = _prazoSortDir === 'asc' ? 'desc' : _prazoSortDir === 'desc' ? null : 'asc';
+    _renderTabelaPrazos();
+  });
 }
 
 // ── Abas ────────────────────────────────────────────────────────────────────
