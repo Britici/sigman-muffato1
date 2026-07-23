@@ -42,10 +42,67 @@ export function init() {
     document.getElementById('oca-fil-pri')?.addEventListener('change',  _renderLista);
     document.getElementById('oca-fil-sala')?.addEventListener('change', _renderLista);
     document.getElementById('oca-search')?.addEventListener('input',    _renderLista);
+    document.getElementById('oca-prazos-toggle')?.addEventListener('click', _toggleTabelaPrazos);
     // Fechar modal com Esc (delegado no body — não duplica porque o modal remove a si mesmo)
   }
+  _renderTabelaPrazos();
   _populateFiltroSala();
   _renderLista();
+}
+
+// ── Tabela de Prazos por Prioridade ──────────────────────────────────────────
+
+function _toggleTabelaPrazos() {
+  const body  = document.getElementById('oca-prazos-body');
+  const arrow = document.getElementById('oca-prazos-arrow');
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent  = isOpen ? '▼ clique para expandir' : '▲ clique para recolher';
+}
+
+function _renderTabelaPrazos() {
+  const body = document.getElementById('oca-prazos-body');
+  if (!body) return;
+
+  const cols = [
+    { idx: 1, label: '1) Solicitação'     },
+    { idx: 2, label: '2) Orçamento'       },
+    { idx: 3, label: '3) Gerar RC/Pedido' },
+    { idx: 4, label: '4) Aprovação'       },
+    { idx: 5, label: '5) Envio Fornec.'   },
+    { idx: 6, label: '6) Previsão Entrega', destaque: true },
+    { idx: 7, label: '7) Lançamento NF'   },
+  ];
+
+  const rows = ['1', '2', '3', '4'].map(pri => {
+    const cells = cols.map(c => {
+      const dias = _prazoEtapa(pri, c.idx);
+      const txt  = dias === 0 ? '0 dias' : `Até ${dias} dias`;
+      return `<td style="padding:9px 12px;text-align:center;font-size:13px;${c.destaque ? 'color:#ef4444;font-weight:600' : 'color:var(--txt2)'}">${txt}</td>`;
+    }).join('');
+    const total = cols.filter(c => c.idx !== 6).reduce((sum, c) => sum + _prazoEtapa(pri, c.idx), 0);
+    return `<tr style="border-top:1px solid var(--bord)">
+      <td style="padding:9px 12px;text-align:center">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:${PRI_COR[pri]};color:#fff;font-size:12px;font-weight:700">${pri}</span>
+      </td>
+      ${cells}
+      <td style="padding:9px 12px;text-align:center;font-size:13px;font-weight:700;color:var(--txt1)">${total} dias</td>
+    </tr>`;
+  }).join('');
+
+  body.innerHTML = `
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:760px">
+      <thead>
+        <tr>
+          <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em">#</th>
+          ${cols.map(c => `<th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">${c.label}</th>`).join('')}
+          <th style="padding:8px 12px;text-align:center;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em">Tempo Total</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
 }
 
 // ── Abas ────────────────────────────────────────────────────────────────────

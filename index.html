@@ -417,7 +417,7 @@
       <!-- ══ SOLICITAÇÃO DE ORDEM DE COMPRA ══ -->
       <div class="pg" id="pg-oc-solicitacao">
         <div class="ph">
-          <div class="pt"><small>PCM · Compras</small>Solicitar Ordem de Compra</div>
+          <div class="pt"><small>PCM · Compras</small>Solicitação de Compras</div>
         </div>
         <div id="ocs-body"></div>
       </div>
@@ -425,9 +425,17 @@
       <!-- ══ ACOMPANHAMENTO DE ORDENS DE COMPRA ══ -->
       <div class="pg" id="pg-oc-acompanhamento">
         <div class="ph">
-          <div class="pt"><small>PCM · Compras</small>Acompanhamento de Ordens de Compra</div>
+          <div class="pt"><small>PCM · Compras</small>Acompanhamento de Compras</div>
         </div>
         <div id="oca-wrap">
+          <!-- Tabela de Prazos por Prioridade -->
+          <div id="oca-prazos-card" style="background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);margin-bottom:16px;overflow:hidden">
+            <div id="oca-prazos-toggle" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none">
+              <span style="font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.06em">📋 Tabela de Prazos por Prioridade</span>
+              <span id="oca-prazos-arrow" style="font-size:11px;color:var(--txt3)">▲ clique para recolher</span>
+            </div>
+            <div id="oca-prazos-body" style="padding:0 16px 16px"></div>
+          </div>
           <!-- Filtros -->
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
             <select id="oca-fil-pri" style="background:var(--surf2);border:1px solid var(--bord);color:var(--txt1);border-radius:7px;padding:7px 12px;font-size:13px;outline:none;cursor:pointer">
