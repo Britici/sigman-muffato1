@@ -405,7 +405,6 @@ CREATE INDEX idx_planejadas_prazo     ON os_planejadas(prazo_limite);
 CREATE TABLE preventiva_templates (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     familia_id      UUID        NOT NULL REFERENCES familias_equipamento(id) ON DELETE CASCADE,
-    area            VARCHAR(30) NOT NULL DEFAULT 'Mecânico', -- 'Mecânico' | 'Elétrico' — agrupamento visual do checklist
     tarefa          TEXT        NOT NULL,
     periodicidade   periodicidade_tipo NOT NULL,
     tempo_estimado_min INTEGER,
