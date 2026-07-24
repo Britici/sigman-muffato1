@@ -261,8 +261,6 @@ export function getMockDB() {
       { id:'PT_FATIA_M2', familiaId:'FAM_FATIA_WEBER', area:'Mecânico', tarefa:'Limpar e lubrificar trilhos da esteira de corte', periodicidade:'Mensal', tempoEstimadoMin:15, criticidade:'B', ordem:2, ativo:true },
       { id:'PT_FATIA_E1', familiaId:'FAM_FATIA_WEBER', area:'Elétrico', tarefa:'Inspecionar sensores de segurança e emergência', periodicidade:'Mensal', tempoEstimadoMin:10, criticidade:'A', ordem:1, ativo:true },
     ],
-    preventivaExecucoes: [],
-
     // ── OS Executadas ────────────────────────────────────────
     // ATENÇÃO (achado 2026-06-27): estes 4 registros usavam nomes de
     // campo diferentes dos que os-executadas.js realmente lê (inicio→ini,
