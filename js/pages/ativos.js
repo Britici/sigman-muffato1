@@ -361,8 +361,9 @@ function _periodLabel(num, unidade) {
   return `${num} ${num === 1 ? par[0] : par[1]}`;
 }
 
-// TODO: agregar de preventiva_execucoes quando esse módulo existir.
-// Por enquanto não há dado de execução de preventiva no mock.
+// Preventiva/Inspeção hoje é só impressão (sem registro de execução no sistema).
+// Se um histórico de execução for implementado no futuro, desenhar a
+// estrutura do zero — não reaproveitar preventiva_execucoes (removida).
 function _ultimaPreventiva(_maquinaId) {
   return '—';
 }
