@@ -51,6 +51,7 @@ export function getMockDB() {
     osC:  178,
     plC:  3,
     racC: 1,
+    inspC: 1,
 
     // ── Configurações ────────────────────────────────────────
     configuracoes: {

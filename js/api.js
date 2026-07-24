@@ -44,6 +44,7 @@ export function saveDB() {
       racC: _db.racC,
       ordensCompra: _db.ordensCompra,
       ocC:  _db.ocC,
+      inspC: _db.inspC,
     }));
   } catch (e) { console.warn('[saveDB]', e); }
 }
@@ -96,6 +97,13 @@ export function _genOC() {
   const db = getDB();
   const num = 'OC-' + String(db.ocC).padStart(4, '0');
   db.ocC++;
+  return num;
+}
+
+export function _genINSP() {
+  const db = getDB();
+  const num = 'INSP-' + String(db.inspC).padStart(4, '0');
+  db.inspC++;
   return num;
 }
 
