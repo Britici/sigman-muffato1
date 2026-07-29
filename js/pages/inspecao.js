@@ -287,7 +287,7 @@ td{padding:5px 7px;border:1px solid #ddd}
   <div class="info-box"><div class="info-label">Manutentor</div><div class="info-val">${manut || '_______________________________'}</div></div>
 </div>
 ${linhas}
-<h2>Observações</h2>
+<h2>OBSERVAÇÕES</h2>
 <div style="border:1px solid #ccc;border-radius:3px;padding:8px 10px">
   ${Array.from({length:5}).map(() => `<div style="border-bottom:1px solid #ccc;height:22px"></div>`).join('')}
 </div>

@@ -16,6 +16,21 @@ document.getElementById('btn-logout')?.addEventListener('click', doLogout);
 document.getElementById('btn-sb-tog')?.addEventListener('click', toggleSB);
 document.getElementById('th-btn')?.addEventListener('click', toggleTheme);
 document.getElementById('sb-ov')?.addEventListener('click', closeSB);
+document.getElementById('btn-reset-dados')?.addEventListener('click', _resetarDados);
+document.getElementById('btn-reset-dados-app')?.addEventListener('click', _resetarDados);
+
+function _resetarDados() {
+  const ok = confirm(
+    'Isso vai apagar TODOS os dados salvos neste navegador (localStorage) ' +
+    'e voltar o sistema pro estado original de fábrica (mock/db.js).\n\n' +
+    'Use só se a tela travou ou está com comportamento estranho.\n' +
+    'O que você preencheu e não salvou será perdido.\n\n' +
+    'Confirma o reset?'
+  );
+  if (!ok) return;
+  localStorage.clear();
+  location.reload();
+}
 
 // Fecha modal ao clicar no backdrop ou em botão data-close
 document.addEventListener('click', e => {

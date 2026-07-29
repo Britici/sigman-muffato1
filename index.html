@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
-  <script>window.SIGMAN_VER = '20260724';</script>
+  <script>window.SIGMAN_VER = '20260724b';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -40,6 +40,9 @@
       <input type="password" id="l-p" placeholder="••••••••" autocomplete="current-password">
     </div>
     <button class="btn btn-p btn-fl" id="btn-login" style="margin-top:4px">Entrar</button>
+    <button type="button" id="btn-reset-dados" style="margin-top:10px;width:100%;background:none;border:none;color:var(--txt3);font-size:11px;cursor:pointer;text-decoration:underline">
+      🔄 Travou / comportamento estranho? Resetar dados de teste
+    </button>
   </div>
 </div>
 
@@ -79,6 +82,7 @@
           <span id="th-hj">0</span> OS hoje
         </div>
         <button class="tb-btn" id="th-btn" title="Alternar tema">🌙</button>
+        <button class="tb-btn" id="btn-reset-dados-app" title="Se algo travar/bugar: limpa dados de teste e recarrega">🔄</button>
         <button class="tb-btn" id="btn-logout" title="Sair">⎋</button>
       </div>
     </header>
