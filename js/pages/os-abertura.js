@@ -15,10 +15,10 @@
 // O.S. Executadas (botão "Atender"), não aqui.
 // ============================================================
 
-import { getDB, saveDB, apiPost, _genOS } from '../api.js?v=20260718a';
-import { CU } from '../auth.js?v=20260718a';
-import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260718a';
-import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js?v=20260718a';
+import { getDB, saveDB, apiPost, _genOS } from '../api.js?v=20260724b';
+import { CU } from '../auth.js?v=20260724b';
+import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260724b';
+import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js?v=20260724b';
 
 let _fotosDataUrl = [];
 // ⚠️ Este módulo tem DOM ESTÁTICO em index.html (o router só alterna
@@ -230,7 +230,22 @@ async function _salvar() {
   const acaoExec   = v('ab-ac').trim();
 
   if (!ehProducao && !manutLogin) { showAlert('al-ab', 'Selecione o manutentor responsável.', 'er'); return; }
-  if (!ehProducao && !acaoExec)   { showAlert('al-ab', 'Descreva a ação executada.', 'er'); return; }
+
+  // Manutenção preenchendo a Execução: tudo obrigatório, exceto
+  // Ação Preventiva Identificada (ab-ap) e Fotos — únicos campos
+  // opcionais deste bloco, por pedido do Tiago.
+  if (!ehProducao) {
+    const faltando = [];
+    if (!acaoExec)        faltando.push('Ação / Serviço Executado');
+    if (!v('ab-dt'))      faltando.push('Data');
+    if (!v('ab-in'))      faltando.push('Hora Início');
+    if (!v('ab-fm'))      faltando.push('Hora Fim');
+    if (!v('ab-parada'))  faltando.push('Tempo de Parada (min)');
+    if (faltando.length) {
+      showAlert('al-ab', `Preencha antes de salvar: ${faltando.join(', ')}.`, 'er');
+      return;
+    }
+  }
 
   const ini = ehProducao ? '' : v('ab-in');
   const fim = ehProducao ? '' : v('ab-fm');

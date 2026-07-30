@@ -2,10 +2,10 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js?v=20260718a';
-import { CU, updOSHoje } from '../auth.js?v=20260718a';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260718a';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260718a';
+import { getDB, saveDB, apiPost } from '../api.js?v=20260724b';
+import { CU, updOSHoje } from '../auth.js?v=20260724b';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260724b';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260724b';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -136,10 +136,15 @@ function _renderSecao(tbId, data, icone, msgVazia) {
 function _rowHtml(o) {
   const status = _status(o);
   const temHist = (o.historico_intervalos || []).length > 0;
+  // Continuar/Atender são ações de quem executa o serviço (manutenção/pcm/admin).
+  // Produção só abre O.S. e acompanha — não deve atender a própria solicitação.
+  const podeAtender = CU?.perfil !== 'producao';
   const acoes = status==='aberta'
-    ? (temHist
-        ? `<button class="btn btn-sm btn-p" onclick="window._continuarOS('${o.numero}')">▶ Continuar</button>`
-        : `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`)
+    ? (podeAtender
+        ? (temHist
+            ? `<button class="btn btn-sm btn-p" onclick="window._continuarOS('${o.numero}')">▶ Continuar</button>`
+            : `<button class="btn btn-sm btn-p" onclick="window._atender('${o.numero}')">▶ Atender</button>`)
+        : `<button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>`)
     : `<button class="btn btn-sm btn-gh" onclick="window._verDet('${o.numero}')">Ver</button>`;
   return `<tr>
   <td style="white-space:nowrap">
@@ -236,7 +241,7 @@ export function verDet(numero) {
   const btnContinuar = document.getElementById('md-continuar-btn');
   if (btnContinuar) {
     const temHistorico = _status(o) === 'aberta' && (o.historico_intervalos || []).length > 0;
-    btnContinuar.style.display = temHistorico ? 'block' : 'none';
+    btnContinuar.style.display = (temHistorico && CU?.perfil !== 'producao') ? 'block' : 'none';
   }
   document.getElementById('md-rac-btn').style.display=_precisaRAC(o)?'inline-block':'none';
   window._aprovarProd  = _aprovarProd;
@@ -440,6 +445,7 @@ function _continuarOS(numero) {
 }
 
 export function abrirConcluir(id, tipo) {
+  if (CU?.perfil === 'producao') { showToast('Produção não pode atender O.S. — aguarde a manutenção.', 'er'); return; }
   const db=getDB();
   _concluirId=id; _concluirTipo=tipo;
   const item = tipo==='plan' ? db.planejadas.find(x=>x.numero===id)

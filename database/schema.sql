@@ -405,6 +405,7 @@ CREATE INDEX idx_planejadas_prazo     ON os_planejadas(prazo_limite);
 CREATE TABLE preventiva_templates (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     familia_id      UUID        NOT NULL REFERENCES familias_equipamento(id) ON DELETE CASCADE,
+    area            VARCHAR(30) NOT NULL DEFAULT 'Mecânico', -- 'Mecânico' | 'Elétrico' — agrupamento visual do checklist
     tarefa          TEXT        NOT NULL,
     periodicidade   periodicidade_tipo NOT NULL,
     tempo_estimado_min INTEGER,
@@ -417,31 +418,7 @@ CREATE TABLE preventiva_templates (
 CREATE INDEX idx_prev_template_familia ON preventiva_templates(familia_id);
 
 -- ============================================================
--- 11. PREVENTIVA_EXECUCOES
--- ============================================================
-
-CREATE TABLE preventiva_execucoes (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    maquina_id      UUID         NOT NULL REFERENCES maquinas(id),
-    template_id     UUID        REFERENCES preventiva_templates(id),
-    tarefa          TEXT        NOT NULL,   -- cópia da tarefa no momento da execução
-    periodicidade   periodicidade_tipo NOT NULL,
-    manutentor_id   UUID        REFERENCES usuarios(id),
-    manutentor_nome VARCHAR(120),
-    data_execucao   DATE        NOT NULL,
-    duracao_min     INTEGER,
-    materiais       TEXT,
-    status          VARCHAR(20) NOT NULL DEFAULT 'concluida',
-    observacoes     TEXT,
-    os_id           UUID        REFERENCES ordens_servico(id),
-    criado_em       TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_prev_exec_maquina ON preventiva_execucoes(maquina_id);
-CREATE INDEX idx_prev_exec_data    ON preventiva_execucoes(data_execucao);
-
--- ============================================================
--- 12. INSPECOES_ROTA
+-- 11. INSPECOES_ROTA
 -- ============================================================
 
 CREATE TABLE inspecoes_rota (
