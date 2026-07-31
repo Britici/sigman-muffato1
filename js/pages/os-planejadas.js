@@ -5,9 +5,9 @@
 // uma OS nova em db.ordens) já estava 100% implementado dentro de
 // os-executadas.js (abrirConcluir + _concluir, tipo 'plan') — só
 // reaproveitamos aqui, sem duplicar lógica.
-import { getDB, saveDB } from '../api.js?v=20260724b';
-import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260724b';
-import { abrirConcluir } from './os-executadas.js?v=20260724b';
+import { getDB, saveDB } from '../api.js?v=20260724c';
+import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260724c';
+import { abrirConcluir } from './os-executadas.js?v=20260724c';
 
 let _sort = { col: 'prazo', dir: 'asc' };
 let _bound = false;
@@ -39,7 +39,7 @@ export function init() {
 // calculamos aqui comparando prazo x hoje, sem alterar o status
 // gravado (evita sobrescrever 'Em andamento' já registrado).
 function _statusEfetivo(p) {
-  if (p.status === 'Concluída') return 'Concluída';
+  if (p.status === 'Concluída' || p.status === 'Aguardando Aprovação') return p.status;
   if (p.prazo && p.prazo < today()) return 'Atrasada';
   return p.status || 'Pendente';
 }
@@ -75,8 +75,8 @@ export function render() {
     th.classList.remove('asc', 'desc');
     if (th.dataset.col === _sort.col) th.classList.add(_sort.dir);
   });
-  const nc = data.filter(p => _statusEfetivo(p) !== 'Concluída');
-  const c  = data.filter(p => _statusEfetivo(p) === 'Concluída');
+  const nc = data.filter(p => !['Concluída', 'Aguardando Aprovação'].includes(_statusEfetivo(p)));
+  const c  = data.filter(p => ['Concluída', 'Aguardando Aprovação'].includes(_statusEfetivo(p)));
   _renderSecao('tb-plan-nc', nc, '✅', 'Nenhuma O.S. planejada pendente.');
   _renderSecao('tb-plan-c',  c,  '📋', 'Nenhuma O.S. planejada concluída ainda.');
   const ctNc = document.getElementById('ctp-nc'); if (ctNc) ctNc.textContent = `Não Concluídas (${nc.length})`;
@@ -99,8 +99,8 @@ function _renderSecao(tbId, data, icone, msgVazia) {
 
 function _rowHtml(p) {
   const status = _statusEfetivo(p);
-  const concluida = status === 'Concluída';
-  const acoes = concluida
+  const finalizada = status === 'Concluída' || status === 'Aguardando Aprovação';
+  const acoes = finalizada
     ? `<button class="btn btn-sm btn-gh" onclick="window._verDetPlan('${p.numero}')">Ver</button>`
     : `<button class="btn btn-sm btn-p" onclick="window._concluirPlan('${p.numero}')">▶ Concluir</button>
        <button class="btn btn-sm btn-gh" onclick="window._verDetPlan('${p.numero}')">Ver</button>`;
@@ -127,7 +127,7 @@ function verDet(numero) {
   if (!p) { showToast('Item não encontrado.', 'er'); return; }
   _curNumero = numero;
   const status = _statusEfetivo(p);
-  const concluida = status === 'Concluída';
+  const finalizada = status === 'Concluída' || status === 'Aguardando Aprovação';
   document.getElementById('mdp-tit').textContent = p.numero;
   document.getElementById('mdp-b').innerHTML = `
     <div class="dr"><span class="dl">Sala</span><span class="dv">${p.sala}</span></div>
@@ -144,7 +144,7 @@ function verDet(numero) {
   `;
   const btnConcluir = document.getElementById('mdp-concluir-btn');
   if (btnConcluir) {
-    btnConcluir.style.display = concluida ? 'none' : 'inline-block';
+    btnConcluir.style.display = finalizada ? 'none' : 'inline-block';
     btnConcluir.textContent = status === 'Em andamento' ? '▶ Continuar' : '▶ Concluir';
   }
   openM('m-det-plan');

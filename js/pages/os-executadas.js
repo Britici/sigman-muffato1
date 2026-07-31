@@ -2,10 +2,10 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js?v=20260724b';
-import { CU, updOSHoje } from '../auth.js?v=20260724b';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260724b';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260724b';
+import { getDB, saveDB, apiPost } from '../api.js?v=20260724c';
+import { CU, updOSHoje } from '../auth.js?v=20260724c';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260724c';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260724c';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -387,7 +387,17 @@ function _blocoAprovacao(o) {
 function _tentarConcluir(o) {
   const prodOK  = !o.aprovadorProdLogin || !!o.aprovadoProdEm;
   const manutOK = !!o.aprovadoManutEm;
-  if (prodOK && manutOK) { o.status = 'concluida'; o.concluidoEm = new Date().toISOString(); }
+  if (prodOK && manutOK) {
+    o.status = 'concluida'; o.concluidoEm = new Date().toISOString();
+    // OS nascida de uma planejada (origem='plan') só reflete 'Concluída'
+    // na planejada quando a OS em si é aprovada de fato — até lá ela
+    // fica 'Aguardando Aprovação' (setado em os-executadas.js/_concluir).
+    if (o.origem === 'plan' && o.origemNum) {
+      const db = getDB();
+      const item = db.planejadas.find(p => p.numero === o.origemNum);
+      if (item) item.status = 'Concluída';
+    }
+  }
 }
 
 function _aprovarProd(numero) {
@@ -559,7 +569,7 @@ async function _concluir() {
     solicitante:'',solicitanteLogin:'',aprovadorProd:'',aprovadorProdLogin:'',
     aprovadoProdEm:'',aprovadoManutEm:'',aprovadorManut:'',aprovadorManutLogin:'',
   };
-  Object.assign(item,{status:'Concluída',concluidoEm:agora,manut,ini,fim,dtExec:data,desc2:desc,durMin});
+  Object.assign(item,{status:'Aguardando Aprovação',concluidoEm:agora,manut,ini,fim,dtExec:data,desc2:desc,durMin});
   db.ordens.push(os); db.osC++;
   saveDB(); closeM('m-con');
   _logEdit('Concluiu',item.numero,`${item.sala} · ${item.maq}`);

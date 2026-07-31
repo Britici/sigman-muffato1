@@ -15,10 +15,10 @@
 // O.S. Executadas (botão "Atender"), não aqui.
 // ============================================================
 
-import { getDB, saveDB, apiPost, _genOS } from '../api.js?v=20260724b';
-import { CU } from '../auth.js?v=20260724b';
-import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260724b';
-import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js?v=20260724b';
+import { getDB, saveDB, apiPost, _genOS } from '../api.js?v=20260724c';
+import { CU } from '../auth.js?v=20260724c';
+import { v, sv, today, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260724c';
+import { salasNoEscopo, ambientesNoEscopo } from '../hierarquia.js?v=20260724c';
 
 let _fotosDataUrl = [];
 // ⚠️ Este módulo tem DOM ESTÁTICO em index.html (o router só alterna
@@ -240,7 +240,6 @@ async function _salvar() {
     if (!v('ab-dt'))      faltando.push('Data');
     if (!v('ab-in'))      faltando.push('Hora Início');
     if (!v('ab-fm'))      faltando.push('Hora Fim');
-    if (!v('ab-parada'))  faltando.push('Tempo de Parada (min)');
     if (faltando.length) {
       showAlert('al-ab', `Preencha antes de salvar: ${faltando.join(', ')}.`, 'er');
       return;
