@@ -41,13 +41,7 @@ document.addEventListener('click', e => {
   if (closeBtn) closeM(closeBtn.dataset.close);
 });
 
-// Enter no login
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const ls = document.getElementById('login-screen');
-    if (ls && ls.style.display !== 'none') doLogin();
-  }
-});
+// Enter no login — listener único fica em auth.js (evita doLogin() duplicado)
 
 // Esc fecha QUALQUER coisa que se sobrepõe na tela — modal (.mb.on),
 // dropdown de prioridade (.psel.open), dropdown de ações (.dd.open,
