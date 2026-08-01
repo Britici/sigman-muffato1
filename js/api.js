@@ -7,8 +7,8 @@
 // Para migrar: só trocar MODE e as constantes abaixo.
 // ============================================================
 
-import { getMockDB } from '../mock/db.js?v=20260724c';
-import { showToast } from './utils.js?v=20260724c';
+import { getMockDB } from '../mock/db.js?v=20260731a';
+import { showToast } from './utils.js?v=20260731a';
 
 // ── Configuração ─────────────────────────────────────────────
 const MODE = 'mock'; // 'mock' | 'sheets' | 'rest'

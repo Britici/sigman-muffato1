@@ -4,9 +4,9 @@
 // Cada página é um módulo JS independente em js/pages/
 // ============================================================
 
-import { getDB } from './api.js?v=20260724c';
-import { showToast } from './utils.js?v=20260724c';
-import { podeAcessar } from './auth.js?v=20260724c';
+import { getDB } from './api.js?v=20260731a';
+import { showToast } from './utils.js?v=20260731a';
+import { podeAcessar } from './auth.js?v=20260731a';
 
 // Mapa hash → { title, pageId, loader }
 // loader é importado dinamicamente — só carrega quando necessário

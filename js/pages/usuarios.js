@@ -3,9 +3,9 @@
 // Gestão de Usuários — acesso EXCLUSIVO ao perfil 'admin'
 // ============================================================
 
-import { getDB, saveDB } from '../api.js?v=20260724c';
-import { CU, ROLES, hashPassword, isAdmin } from '../auth.js?v=20260724c';
-import { showToast, openM, closeM } from '../utils.js?v=20260724c';
+import { getDB, saveDB } from '../api.js?v=20260731a';
+import { CU, ROLES, hashPassword, isAdmin } from '../auth.js?v=20260731a';
+import { showToast, openM, closeM } from '../utils.js?v=20260731a';
 
 let _editId = null; // login do usuário em edição (null = criando novo)
 let _sortAtivos   = { col: 'nome', dir: 'asc' }; // ordenação do card "Ativos"
@@ -214,6 +214,12 @@ function _openForm(login) {
         <div class="fg"><label>Hierarquia — Lado</label><select id="me-lado"><option value="">— Sem hierarquia —</option>${ladoOptions}</select></div>
         <div class="fg"><label>Nível</label><select id="me-nivel"></select></div>
       </div>
+      <div class="alert er" id="me-alerta-ambos" style="display:none;margin-top:10px;font-size:12px">
+        ⚠️ <strong>Lado "Ambos"</strong> — este usuário entra na lista de
+        aprovadores de <strong>produção E manutenção</strong> para toda Sala
+        dentro do escopo. Reservado a Diretoria/Coordenação geral. Use
+        "Produção" ou "Manutenção" para qualquer outro cargo.
+      </div>
       <div class="fg" id="me-escopo-wrap" style="margin-top:10px">
         <label id="me-escopo-label">Escopo</label>
         <select id="me-escopo" multiple style="min-height:90px"></select>
@@ -233,11 +239,12 @@ function _openForm(login) {
       });
     }
 
-    document.getElementById('me-lado').addEventListener('change', () => _atualizarNivelEscopo(u));
+    document.getElementById('me-lado').addEventListener('change', () => { _atualizarNivelEscopo(u); _toggleAlertaAmbos(); });
     document.getElementById('me-nivel').addEventListener('change', () => _populateEscopo(u));
     document.getElementById('me-perfil').addEventListener('change', () => _toggleHierarquiaParaAdmin());
     _atualizarNivelEscopo(u);
     _toggleHierarquiaParaAdmin();
+    _toggleAlertaAmbos();
   }
 
   document.getElementById('btn-edit-save').onclick = _saveForm;
@@ -267,6 +274,14 @@ function _atualizarNivelEscopo(u) {
   _populateEscopo(u);
 }
 
+// Mostra o aviso de aprovação dupla quando lado === 'ambos'.
+function _toggleAlertaAmbos() {
+  const alerta = document.getElementById('me-alerta-ambos');
+  const ladoSel = document.getElementById('me-lado');
+  if (!alerta || !ladoSel) return;
+  alerta.style.display = ladoSel.value === 'ambos' ? 'block' : 'none';
+}
+
 // Perfil admin não tem lado/nível/escopo — trava os campos.
 function _toggleHierarquiaParaAdmin() {
   const perfil = document.getElementById('me-perfil')?.value;
@@ -279,6 +294,7 @@ function _toggleHierarquiaParaAdmin() {
     document.getElementById('me-nivel').innerHTML = '<option value="">—</option>';
     document.getElementById('me-escopo-wrap').style.display = 'none';
   }
+  _toggleAlertaAmbos();
 }
 function sv_select(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
 
