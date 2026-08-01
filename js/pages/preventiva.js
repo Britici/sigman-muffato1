@@ -4,7 +4,7 @@
 // Cascata: Tipo → Ambiente → Sala → Máquina
 // ============================================================
 
-import { getDB } from '../api.js?v=20260731a';
+import { getDB } from '../api.js?v=20260801a';
 
 const DOCS = {
   preventiva: { titulo: 'ORDEM DE MANUTENÇÃO PREVENTIVA', doc: 'SIGMAN-PREV' },

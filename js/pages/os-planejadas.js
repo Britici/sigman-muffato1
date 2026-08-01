@@ -5,9 +5,9 @@
 // uma OS nova em db.ordens) já estava 100% implementado dentro de
 // os-executadas.js (abrirConcluir + _concluir, tipo 'plan') — só
 // reaproveitamos aqui, sem duplicar lógica.
-import { getDB, saveDB } from '../api.js?v=20260731a';
-import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260731a';
-import { abrirConcluir } from './os-executadas.js?v=20260731a';
+import { getDB, saveDB } from '../api.js?v=20260801a';
+import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260801a';
+import { abrirConcluir } from './os-executadas.js?v=20260801a';
 
 let _sort = { col: 'prazo', dir: 'asc' };
 let _bound = false;
@@ -160,11 +160,13 @@ function delPlanejada(numero) {
 }
 
 // Edição dos campos "de planejamento" (tipo/prioridade/prazo/horas/
-// descrição). Sala e Máquina ficam de fora de propósito — trocar o
-// ativo de uma planejada já criada exigiria os mesmos dropdowns em
-// cascata de Local/Ambiente/Sala/Máquina que existem na Abertura de
-// OS (hierarquia.js); escopo maior, deixado pra quando o Planejamento
-// PCM (js/pages/os-planejamento.js, ainda stub) for implementado.
+// descrição). Sala e Máquina aparecem como somente-leitura (com
+// aviso) — de propósito. Editá-las de fato exigiria os mesmos
+// dropdowns em cascata de Local/Ambiente/Sala/Máquina que existem na
+// Abertura de OS (os-abertura.js, lógica não extraída/reaproveitável
+// hoje); escopo maior, deixado pra quando o Planejamento PCM
+// (js/pages/os-planejamento.js, ainda stub) for implementado. Até lá,
+// trocar o ativo de uma planejada = excluir e recriar.
 function _abrirEditar(numero) {
   const db = getDB();
   const p = db.planejadas.find(x => x.numero === numero);
@@ -172,6 +174,14 @@ function _abrirEditar(numero) {
   closeM('m-det-plan');
   document.getElementById('me-t').textContent = `Editar ${p.numero}`;
   document.getElementById('me-b').innerHTML = `
+    <div class="fg-row">
+      <div class="fg"><label>Sala</label><input type="text" value="${p.sala||''}" disabled></div>
+      <div class="fg"><label>Máquina</label><input type="text" value="${p.maq||''}" disabled></div>
+    </div>
+    <div class="alert inf show" style="display:block;margin-top:2px;margin-bottom:10px;font-size:12px">
+      ℹ️ Sala e Máquina não são editáveis aqui. Para corrigir o ativo,
+      exclua esta planejada e crie uma nova com Sala/Máquina corretas.
+    </div>
     <div class="fg-row">
       <div class="fg"><label>Tipo de Serviço</label>
         <select id="mep-tp">

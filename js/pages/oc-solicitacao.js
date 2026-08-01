@@ -5,7 +5,7 @@
 // para ES6 + mock/localStorage (mesmo padrão do resto do V2).
 // ============================================================
 
-import { getDB, saveDB, _genOC } from '../api.js?v=20260731a';
+import { getDB, saveDB, _genOC } from '../api.js?v=20260801a';
 
 const PRIORIDADES = [
   { val: '1', label: '1 – Emergencial', desc: 'Processo parado – compra imediata' },
