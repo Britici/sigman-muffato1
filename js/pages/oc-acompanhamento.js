@@ -5,7 +5,7 @@
 // para ES6 + mock/localStorage (mesmo padrão do resto do V2).
 // ============================================================
 
-import { getDB, saveDB } from '../api.js?v=20260801b';
+import { getDB, saveDB } from '../api.js?v=20260801c';
 
 // ── Prazos em dias úteis por prioridade (mesmo do V1) ──────────────────────
 const PRAZOS = {

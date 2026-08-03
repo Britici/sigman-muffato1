@@ -3,9 +3,9 @@
 // Gestão de Usuários — acesso EXCLUSIVO ao perfil 'admin'
 // ============================================================
 
-import { getDB, saveDB } from '../api.js?v=20260801b';
-import { CU, ROLES, hashPassword, isAdmin } from '../auth.js?v=20260801b';
-import { showToast, openM, closeM } from '../utils.js?v=20260801b';
+import { getDB, saveDB } from '../api.js?v=20260801c';
+import { CU, ROLES, hashPassword, isAdmin } from '../auth.js?v=20260801c';
+import { showToast, openM, closeM } from '../utils.js?v=20260801c';
 
 let _editId = null; // login do usuário em edição (null = criando novo)
 let _sortAtivos   = { col: 'nome', dir: 'asc' }; // ordenação do card "Ativos"

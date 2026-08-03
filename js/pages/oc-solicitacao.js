@@ -5,7 +5,7 @@
 // para ES6 + mock/localStorage (mesmo padrão do resto do V2).
 // ============================================================
 
-import { getDB, saveDB, _genOC } from '../api.js?v=20260801b';
+import { getDB, saveDB, _genOC } from '../api.js?v=20260801c';
 
 const PRIORIDADES = [
   { val: '1', label: '1 – Emergencial', desc: 'Processo parado – compra imediata' },
@@ -16,17 +16,17 @@ const PRIORIDADES = [
 const TIPOS_ACAO = ['Corretiva', 'Preventiva', 'Melhoria', 'Instalação', 'Reforma', 'Outros'];
 
 let _fotos = [];
-let _bound = false;
 
 export function init() {
   _render();
-  if (!_bound) {
-    _bound = true;
-    document.getElementById('ocs-sala')?.addEventListener('change', _onSalaChange);
-    document.getElementById('ocs-btn-limpar')?.addEventListener('click', _limpar);
-    document.getElementById('form-ocs')?.addEventListener('submit', _submit);
-    _bindFotos();
-  }
+  // OBS: body.innerHTML é recriado do zero em toda chamada de _render(),
+  // logo os elementos abaixo são sempre novos — sem risco de listener
+  // duplicado. Por isso NÃO usamos o padrão `_bound` aqui (ele impediria
+  // o rebind necessário e deixaria a tela sem funcionar após a 1ª visita).
+  document.getElementById('ocs-sala')?.addEventListener('change', _onSalaChange);
+  document.getElementById('ocs-btn-limpar')?.addEventListener('click', _limpar);
+  document.getElementById('form-ocs')?.addEventListener('submit', _submit);
+  _bindFotos();
   _populateSalas();
 }
 
