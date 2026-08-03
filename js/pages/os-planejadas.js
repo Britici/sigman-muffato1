@@ -5,9 +5,9 @@
 // uma OS nova em db.ordens) já estava 100% implementado dentro de
 // os-executadas.js (abrirConcluir + _concluir, tipo 'plan') — só
 // reaproveitamos aqui, sem duplicar lógica.
-import { getDB, saveDB } from '../api.js?v=20260801a';
-import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260801a';
-import { abrirConcluir } from './os-executadas.js?v=20260801a';
+import { getDB, saveDB } from '../api.js?v=20260801b';
+import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260801b';
+import { abrirConcluir } from './os-executadas.js?v=20260801b';
 
 let _sort = { col: 'prazo', dir: 'asc' };
 let _bound = false;

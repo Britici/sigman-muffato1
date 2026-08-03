@@ -5,7 +5,7 @@
 // para ES6 + mock/localStorage (mesmo padrão do resto do V2).
 // ============================================================
 
-import { getDB, saveDB } from '../api.js?v=20260801a';
+import { getDB, saveDB } from '../api.js?v=20260801b';
 
 // ── Prazos em dias úteis por prioridade (mesmo do V1) ──────────────────────
 const PRAZOS = {
@@ -504,13 +504,12 @@ function _abrirModal(oc, etapaIdx) {
     reader.readAsDataURL(file);
   });
 
-  const fechar = () => overlay.remove();
+  const fechar = () => { overlay.remove(); document.removeEventListener('keydown', esc); };
   overlay.querySelector('#ocm-close').addEventListener('click', fechar);
   overlay.querySelector('#ocm-cancel').addEventListener('click', fechar);
   overlay.addEventListener('click', e => { if (e.target === overlay) fechar(); });
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') { fechar(); document.removeEventListener('keydown', esc); }
-  });
+  function esc(e) { if (e.key === 'Escape') fechar(); }
+  document.addEventListener('keydown', esc);
 
   // Salvar
   overlay.querySelector('#ocm-salvar').addEventListener('click', function () {

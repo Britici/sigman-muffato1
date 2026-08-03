@@ -11,10 +11,10 @@
 // usuário.
 // ============================================================
 
-import { getDB, saveDB, _genPL } from '../api.js?v=20260801a';
-import { CU } from '../auth.js?v=20260801a';
-import { v, sv, today, showAlert } from '../utils.js?v=20260801a';
-import { salasNoEscopo } from '../hierarquia.js?v=20260801a';
+import { getDB, saveDB, _genPL } from '../api.js?v=20260801b';
+import { CU } from '../auth.js?v=20260801b';
+import { v, sv, today, showAlert } from '../utils.js?v=20260801b';
+import { salasNoEscopo } from '../hierarquia.js?v=20260801b';
 
 // Mesmo padrão de guarda de os-abertura.js: init() roda a cada
 // navegação, mas o DOM desta página é estático (router só alterna a
