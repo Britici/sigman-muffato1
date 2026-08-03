@@ -1,13 +1,13 @@
 // SIGMAN v2.0 — pages/os-planejadas.js
 // Rastreamento/execução das O.S. Planejadas (criadas em Planejamento
-// PCM, ainda um stub separado — ver js/pages/os-planejamento.js).
+// PCM — js/pages/os-planejamento.js, completo desde 2026-08-03).
 // O fluxo de "Concluir" (marcar andamento / concluir de fato, gerando
 // uma OS nova em db.ordens) já estava 100% implementado dentro de
 // os-executadas.js (abrirConcluir + _concluir, tipo 'plan') — só
 // reaproveitamos aqui, sem duplicar lógica.
-import { getDB, saveDB } from '../api.js?v=20260801c';
-import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260801c';
-import { abrirConcluir } from './os-executadas.js?v=20260801c';
+import { getDB, saveDB } from '../api.js?v=20260803a';
+import { v, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce } from '../utils.js?v=20260803a';
+import { abrirConcluir } from './os-executadas.js?v=20260803a';
 
 let _sort = { col: 'prazo', dir: 'asc' };
 let _bound = false;
@@ -164,9 +164,9 @@ function delPlanejada(numero) {
 // aviso) — de propósito. Editá-las de fato exigiria os mesmos
 // dropdowns em cascata de Local/Ambiente/Sala/Máquina que existem na
 // Abertura de OS (os-abertura.js, lógica não extraída/reaproveitável
-// hoje); escopo maior, deixado pra quando o Planejamento PCM
-// (js/pages/os-planejamento.js, ainda stub) for implementado. Até lá,
-// trocar o ativo de uma planejada = excluir e recriar.
+// hoje). Refatoração (extrair pra módulo compartilhado) segue como
+// opção futura, não urgente — trocar o ativo de uma planejada
+// continua sendo: excluir e recriar.
 function _abrirEditar(numero) {
   const db = getDB();
   const p = db.planejadas.find(x => x.numero === numero);

@@ -2,10 +2,10 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js?v=20260801c';
-import { CU, updOSHoje } from '../auth.js?v=20260801c';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260801c';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260801c';
+import { getDB, saveDB, apiPost } from '../api.js?v=20260803a';
+import { CU, updOSHoje } from '../auth.js?v=20260803a';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260803a';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260803a';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -611,6 +611,10 @@ export function abrirRAC(os) {
   sv('rac-falha',os.prob||''); sv('rac-imediata',os.acao||''); sv('rac-resp-manu',os.manut||'');
   ['rac-causa','rac-p1','rac-p2','rac-p3','rac-p4','rac-p5','rac-preventiva','rac-resp-prod','rac-exec'].forEach(id=>sv(id,''));
   window._racOsRef=os.numero;
+  // btn-rac-save fica oculto depois de "Ver" um RAC fechado (analise-causa-raiz.js)
+  // — reexibir aqui, senão o Salvar sumiria pra sempre depois da 1ª visualização.
+  const btnSave=document.getElementById('btn-rac-save');
+  if(btnSave) btnSave.style.display='';
   openM('mb-rac');
 }
 
@@ -685,7 +689,7 @@ function _precisaRAC(o) {
   const crit=parseInt(maq?.criticidade)||3;
   const lim={1:60,2:120,3:10080,4:20160}[crit]??120;
   if(parada<=lim) return false;
-  return !(db.racs||[]).find(r=>r.osNumero===o.numero&&r.status==='Fechado');
+  return !(db.racs||[]).find(r=>r.osRef===o.numero&&r.status==='Fechado');
 }
 
 function _genOS() {

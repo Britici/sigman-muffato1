@@ -3,18 +3,20 @@
 // ============================================================
 // Tela do PCM pra CRIAR uma O.S. Planejada (db.planejadas). O
 // rastreamento/execução dela (marcar andamento, concluir, gerar a OS
-// de verdade) já está em os-planejadas.js — este módulo só cobre o
-// formulário "Nova O.S. Planejada".
+// de verdade) está em os-planejadas.js, reaproveitando abrirConcluir/
+// _concluir de os-executadas.js — este módulo só cobre o formulário
+// "Nova O.S. Planejada". Fluxo completo (criar → andamento → concluir
+// → gera OS) fechado e testado em 2026-08-03.
 // Cascata Sala→Máquina segue o mesmo padrão de os-abertura.js, mas
 // achatada em 1 nível só (o form já tem um único campo "Sala / Local",
 // sem Ambiente separado) — lista direto todas as salas no escopo do
 // usuário.
 // ============================================================
 
-import { getDB, saveDB, _genPL } from '../api.js?v=20260801c';
-import { CU } from '../auth.js?v=20260801c';
-import { v, sv, today, showAlert } from '../utils.js?v=20260801c';
-import { salasNoEscopo } from '../hierarquia.js?v=20260801c';
+import { getDB, saveDB, _genPL } from '../api.js?v=20260803a';
+import { CU } from '../auth.js?v=20260803a';
+import { v, sv, today, showAlert } from '../utils.js?v=20260803a';
+import { salasNoEscopo } from '../hierarquia.js?v=20260803a';
 
 // Mesmo padrão de guarda de os-abertura.js: init() roda a cada
 // navegação, mas o DOM desta página é estático (router só alterna a
