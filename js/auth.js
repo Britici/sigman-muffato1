@@ -3,10 +3,10 @@
 // Login, sessão e controle de menus por perfil
 // ============================================================
 
-import { getDB, saveDB, syncAll } from './api.js?v=20260801b';
-import { sv, showToast } from './utils.js?v=20260801b';
-import { initRouter, goTo } from './router.js?v=20260801b';
-import { buildNav, updateNavDots } from './nav.js?v=20260801b';
+import { getDB, saveDB, syncAll } from './api.js?v=20260801c';
+import { sv, showToast } from './utils.js?v=20260801c';
+import { initRouter, goTo } from './router.js?v=20260801c';
+import { buildNav, updateNavDots } from './nav.js?v=20260801c';
 
 export let CU = null; // usuário logado
 
