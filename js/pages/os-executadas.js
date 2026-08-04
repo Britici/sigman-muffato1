@@ -2,10 +2,11 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js?v=20260803a';
-import { CU, updOSHoje } from '../auth.js?v=20260803a';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260803a';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260803a';
+import { getDB, saveDB, apiPost } from '../api.js?v=20260803b';
+import { CU, updOSHoje } from '../auth.js?v=20260803b';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260803b';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260803b';
+import { init as _initRAC, resetFotos as _resetRACFotos } from './analise-causa-raiz.js?v=20260803b';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -603,6 +604,13 @@ function _registrarIntervaloParcial(o, {manut, manutLogin, ini, fim, durMin, par
 
 export function abrirRAC(os) {
   closeM('m-det');
+  // Garante que analise-causa-raiz.js já religou os listeners do modal
+  // (Salvar/Imprimir/fotos) — sem isso, se o usuário nunca visitou a
+  // tela de Causa Raiz nesta sessão, o router nunca importou o módulo
+  // e o botão Salvar fica sem nenhum listener (bug real, achado em
+  // 2026-08-03). _initRAC() é idempotente (guard _bound interno).
+  _initRAC();
+  _resetRACFotos();
   const salaSel=document.getElementById('rac-sala');
   if(salaSel){salaSel.innerHTML=`<option value="${os.sala}">${os.sala}</option>`;salaSel.setAttribute('disabled','');}
   const equipSel=document.getElementById('rac-equip');

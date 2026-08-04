@@ -15,13 +15,18 @@
 // renomear (evita quebrar a integração existente).
 // ============================================================
 
-import { getDB, saveDB, _genRAC } from '../api.js?v=20260803a';
-import { CU } from '../auth.js?v=20260803a';
-import { v, sv, fd, today, openM, closeM, showAlert, showToast } from '../utils.js?v=20260803a';
-import { salasNoEscopo } from '../hierarquia.js?v=20260803a';
+import { getDB, saveDB, _genRAC } from '../api.js?v=20260803b';
+import { CU } from '../auth.js?v=20260803b';
+import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260803b';
+import { salasNoEscopo } from '../hierarquia.js?v=20260803b';
 
 // DOM desta página é estático (router só alterna .on) — bind único.
 let _bound = false;
+// Fotos anexadas no modal (mesmo padrão do modal de Concluir em
+// os-executadas.js: só o preview visual e esta variável são resetados
+// ao abrir um RAC novo — o array interno de setupPhotoPreview não tem
+// um método de reset externo).
+let _fotosDataUrl = [];
 
 export function init() {
   if (!_bound) {
@@ -30,8 +35,20 @@ export function init() {
     document.getElementById('rac-sala')?.addEventListener('change', _populateEquip);
     document.getElementById('btn-rac-save')?.addEventListener('click', _salvar);
     document.getElementById('btn-rac-print')?.addEventListener('click', _imprimir);
+    setupPhotoPreview('rac-photo-input', 'rac-photo-preview', (dataUrls) => { _fotosDataUrl = dataUrls; });
   }
   _render();
+}
+
+// Usado tanto por _abrirNovo() (botão local) quanto por abrirRAC() em
+// os-executadas.js (RAC gerado a partir de uma OS) — os dois abrem um
+// RAC "em branco" quanto a fotos/anexos.
+export function resetFotos() {
+  _fotosDataUrl = [];
+  const prev = document.getElementById('rac-photo-preview');
+  if (prev) prev.innerHTML = '<span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto(s)</span>';
+  const inputFoto = document.getElementById('rac-photo-input');
+  if (inputFoto) inputFoto.value = '';
 }
 
 // ── Abrir modal em branco (botão "+ Novo RAC" da página) ──────────
@@ -54,6 +71,7 @@ function _abrirNovo() {
    'rac-imediata', 'rac-preventiva', 'rac-resp-prod', 'rac-resp-manu', 'rac-exec'].forEach(id => sv(id, ''));
   sv('rac-data', today());
   sv('rac-hora', new Date().toTimeString().slice(0, 5));
+  resetFotos();
   const btnSave = document.getElementById('btn-rac-save');
   if (btnSave) btnSave.style.display = '';
   openM('mb-rac');
@@ -94,12 +112,14 @@ function _salvar() {
     acaoImediata: v('rac-imediata').trim(), acaoPreventiva: v('rac-preventiva').trim(),
     respProd: v('rac-resp-prod').trim(), respManu: v('rac-resp-manu').trim(), executantes: v('rac-exec').trim(),
     status: 'Aberto', dataFechamento: '', fechadoPor: '', criadoEm: agora,
+    fotos: _fotosDataUrl.slice(),
   };
   db.racs = db.racs || [];
   db.racs.push(rac);
   saveDB();
   closeM('mb-rac');
   window._racOsRef = null;
+  resetFotos();
   showToast(`${numero} criado.`, 'ok');
   _render();
 }
@@ -136,6 +156,16 @@ function _ver(numero) {
   sv('rac-p1', r.why1); sv('rac-p2', r.why2); sv('rac-p3', r.why3); sv('rac-p4', r.why4); sv('rac-p5', r.why5);
   sv('rac-imediata', r.acaoImediata); sv('rac-preventiva', r.acaoPreventiva);
   sv('rac-resp-prod', r.respProd); sv('rac-resp-manu', r.respManu); sv('rac-exec', r.executantes);
+  const prev = document.getElementById('rac-photo-preview');
+  if (prev) {
+    const fotos = r.fotos || [];
+    prev.innerHTML = fotos.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${fotos.map(url =>
+          `<img src="${url}" class="photo-thumb" alt="Evidência">`).join('')}</div>`
+      : `<span style="color:var(--txt3);font-size:13px">Sem fotos anexadas</span>`;
+  }
+  const inputFoto = document.getElementById('rac-photo-input');
+  if (inputFoto) inputFoto.value = '';
   const btnSave = document.getElementById('btn-rac-save');
   if (btnSave) btnSave.style.display = 'none';
   openM('mb-rac');
