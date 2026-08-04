@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
-  <script>window.SIGMAN_VER = '20260803a';</script>
+  <script>window.SIGMAN_VER = '20260803b';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -606,6 +606,12 @@
     </div>
     <div class="card"><div class="card-t">2 — Falha / Defeito Identificado</div>
       <div class="fg"><textarea id="rac-falha" placeholder="Descrever a falha..."></textarea></div>
+    </div>
+    <div class="card"><div class="card-t">Evidências (fotos)</div>
+      <div class="photo-zone" id="rac-photo-zone">
+        <input type="file" id="rac-photo-input" accept="image/*" multiple style="display:none">
+        <div id="rac-photo-preview"><span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto(s)</span></div>
+      </div>
     </div>
     <div class="card"><div class="card-t">3 — Causa Raiz</div>
       <div class="fg"><textarea id="rac-causa" placeholder="Análise detalhada da causa..."></textarea></div>
