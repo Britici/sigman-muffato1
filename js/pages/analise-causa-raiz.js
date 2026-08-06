@@ -15,10 +15,10 @@
 // renomear (evita quebrar a integração existente).
 // ============================================================
 
-import { getDB, saveDB, _genRAC } from '../api.js?v=20260803b';
-import { CU } from '../auth.js?v=20260803b';
-import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260803b';
-import { salasNoEscopo } from '../hierarquia.js?v=20260803b';
+import { getDB, saveDB, _genRAC } from '../api.js?v=20260804a';
+import { CU } from '../auth.js?v=20260804a';
+import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260804a';
+import { salasNoEscopo } from '../hierarquia.js?v=20260804a';
 
 // DOM desta página é estático (router só alterna .on) — bind único.
 let _bound = false;
@@ -156,6 +156,7 @@ function _ver(numero) {
   sv('rac-p1', r.why1); sv('rac-p2', r.why2); sv('rac-p3', r.why3); sv('rac-p4', r.why4); sv('rac-p5', r.why5);
   sv('rac-imediata', r.acaoImediata); sv('rac-preventiva', r.acaoPreventiva);
   sv('rac-resp-prod', r.respProd); sv('rac-resp-manu', r.respManu); sv('rac-exec', r.executantes);
+  _fotosDataUrl = r.fotos || [];
   const prev = document.getElementById('rac-photo-preview');
   if (prev) {
     const fotos = r.fotos || [];
@@ -213,65 +214,89 @@ function _render() {
 function _imprimir() {
   const win = window.open('', '_blank');
   const data = v('rac-data') || today(), hora = v('rac-hora') || '';
-  const campo = id => (document.getElementById(id)?.value || '—');
+  const campo = id => (document.getElementById(id)?.value || '');
+  const fotos = _fotosDataUrl.slice(0, 4);
+  const fotosHtml = Array.from({ length: 4 }, (_, i) => fotos[i]
+    ? `<div class="foto-box"><img src="${fotos[i]}" alt="Foto ${i + 1}"></div>`
+    : `<div class="foto-box foto-vazia">FOTO ${i + 1}</div>`
+  ).join('');
   win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <title>RAC — ${campo('rac-equip')}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:10mm 12mm}
-    h1{font-size:18px;font-weight:800;color:#C41230}
-    .sub{font-size:11px;color:#555;margin-bottom:10px}
+    h1{font-size:20px;font-weight:800}
+    .logo-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .sub{font-size:11px;color:#555}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .bar{background:linear-gradient(90deg,#d99a1f,#B8972A);color:#fff;font-weight:700;font-size:12px;
-      padding:5px 10px;margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px;border-radius:2px}
-    .grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+      padding:5px 10px;margin:8px 0 6px;text-transform:uppercase;letter-spacing:.5px;border-radius:2px}
+    .field{margin-bottom:6px}
     .field label{font-size:9px;font-weight:700;color:#888;text-transform:uppercase;display:block}
     .field p{border-bottom:1px solid #ccc;min-height:16px;padding:2px 0;font-size:12px}
     .why-item{display:flex;gap:6px;margin-bottom:8px;align-items:flex-start}
     .why-num{background:#C41230;color:#fff;font-weight:700;font-size:10px;border-radius:50%;
       width:16px;height:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .why-line{flex:1;border-bottom:1px solid #ccc;min-height:14px;padding:1px 0}
-    .assinaturas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
+    .foto-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+    .foto-box{background:#f2f2f2;border:1px solid #ddd;border-radius:4px;height:120px;
+      display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .foto-box img{width:100%;height:100%;object-fit:cover}
+    .foto-vazia{color:#999;font-size:11px;font-weight:700}
+    .assinaturas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}
     .ass{border-top:1px solid #000;padding-top:4px;font-size:11px;text-align:center}
     @media print{body{padding:6mm 8mm}}
-  </style></head><body>
-  <h1>RELATÓRIO DE ANÁLISE DE CAUSA RAIZ</h1>
-  <div class="sub">Muffato Foods — SIGMAN · ${fd(data)} ${hora}</div>
-
-  <div class="bar">1 — Identificação</div>
-  <div class="grid">
-    <div class="field"><label>Sala</label><p>${campo('rac-sala')}</p></div>
-    <div class="field"><label>Equipamento</label><p>${campo('rac-equip')}</p></div>
-    <div class="field"><label>Data</label><p>${fd(data)}</p></div>
-    <div class="field"><label>Hora da Parada</label><p>${hora || '—'}</p></div>
+  </style>
+  </head><body>
+  <div class="logo-row">
+    <div>
+      <h1>RELATÓRIO ANÁLISE CAUSA RAIZ</h1>
+      <div class="sub">Muffato Foods · PCM · ${fd(data)} ${hora ? '· ' + hora : ''}</div>
+    </div>
+    <img src="https://muffatofoods.com.br/assets/images/foods_logo.png" style="height:36px">
   </div>
 
-  <div class="bar">2 — Falha / Defeito Identificado</div>
-  <div class="field"><p style="min-height:26px">${campo('rac-falha')}</p></div>
+  <div class="cols">
+    <div>
+      <div class="bar">1 - Identificação do Problema</div>
+      <div class="field"><label>Tag/Equip</label><p>${campo('rac-equip')}</p></div>
+      <div class="field"><label>Data</label><p>${fd(data)}</p></div>
+      <div class="field"><label>Hora da Parada</label><p>${hora}</p></div>
 
-  <div class="bar">3 — Causa Raiz</div>
-  <div class="field"><p style="min-height:26px">${campo('rac-causa')}</p></div>
+      <div class="bar">2 - Falha / Efeito</div>
+      <div class="field"><label>Falha identificada</label><p style="min-height:30px">${campo('rac-falha')}</p></div>
 
-  <div class="bar">4 — Análise dos 5 Porquês</div>
-  ${['rac-p1', 'rac-p2', 'rac-p3', 'rac-p4', 'rac-p5'].map((id, i) => `
-  <div class="why-item"><div class="why-num">${i + 1}</div><div class="why-line">${campo(id)}</div></div>`).join('')}
+      <div class="bar">3 - Causa</div>
+      <div class="field"><label>Detalhamento</label><p style="min-height:30px">${campo('rac-causa')}</p></div>
 
-  <div class="bar">5 — Ação Imediata</div>
-  <div class="field"><p style="min-height:26px">${campo('rac-imediata')}</p></div>
+      <div class="bar">4 - Análise dos 5 Porquês</div>
+      ${['rac-p1', 'rac-p2', 'rac-p3', 'rac-p4', 'rac-p5'].map((id, i) => `
+      <div class="why-item"><div class="why-num">${i + 1}</div><div class="why-line">${campo(id)}</div></div>`).join('')}
+    </div>
 
-  <div class="bar">6 — Ação Preventiva</div>
-  <div class="field"><p style="min-height:26px">${campo('rac-preventiva')}</p></div>
+    <div>
+      <div class="bar">Evidências da Falha</div>
+      <div class="foto-grid">${fotosHtml}</div>
 
-  <div class="bar">7 — Equipe Responsável</div>
-  <div class="field"><label>Resp. Produção</label><p>${campo('rac-resp-prod')}</p></div>
-  <div class="field"><label>Resp. Manutenção</label><p>${campo('rac-resp-manu')}</p></div>
-  <div class="field"><label>Executantes</label><p>${campo('rac-exec')}</p></div>
+      <div class="bar">5 - Ação Imediata</div>
+      <div class="field"><p style="min-height:26px">${campo('rac-imediata')}</p></div>
+
+      <div class="bar">6 - Ação Preventiva</div>
+      <div class="field"><p style="min-height:26px">${campo('rac-preventiva')}</p></div>
+
+      <div class="bar">7 - Equipe Responsável</div>
+      <div class="field"><label>Resp. Produção</label><p>${campo('rac-resp-prod')}</p></div>
+      <div class="field"><label>Resp. Manutenção</label><p>${campo('rac-resp-manu')}</p></div>
+      <div class="field"><label>Executantes</label><p>${campo('rac-exec')}</p></div>
+    </div>
+  </div>
 
   <div class="assinaturas">
     <div class="ass">Responsável Produção</div>
     <div class="ass">Responsável Manutenção</div>
     <div class="ass">Coordenador / Supervisor</div>
   </div>
-  <script>window.print();<\/script>
+  <script>setTimeout(()=>window.print(),400);<\/script>
   </body></html>`);
   win.document.close();
 }
