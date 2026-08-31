@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
-  <script>window.SIGMAN_VER = '20260804a';</script>
+  <script>window.SIGMAN_VER = '20260804b';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -548,6 +548,22 @@
 </div>
 
 <!-- ══ MODAL: CONCLUIR OS ══ -->
+<div class="mb" id="m-edit-os">
+  <div class="modal">
+    <div class="mhd"><div class="mtit">Editar O.S. <span id="me-numero" style="color:var(--txt3);font-weight:400"></span></div><button class="mcl" data-close="m-edit-os">×</button></div>
+    <div class="alert" id="al-edit-os"></div>
+    <div class="fg-row" style="margin-top:6px">
+      <div class="fg"><label>Tipo de Ação</label><select id="me-tipo"><option value="">Selecione...</option><option>Corretiva</option><option>Preventiva</option><option>Preditiva</option><option>Inspeção</option><option>Melhoria</option></select></div>
+      <div class="fg"><label>Prioridade</label><select id="me-prio"><option value="">Selecione...</option><option value="1">1 – Crítico (Parada de Máquina)</option><option value="2">2 – Alta (Risco de Parada)</option><option value="3">3 – Média</option><option value="4">4 – Baixa</option></select></div>
+      <div class="fg fg-full"><label>Problema</label><textarea id="me-prob" placeholder="Descrever o problema..."></textarea></div>
+    </div>
+    <div class="mft">
+      <button class="btn btn-gh" data-close="m-edit-os">Cancelar</button>
+      <button class="btn btn-p" id="btn-edit-os-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="mb" id="m-con">
   <div class="modal">
     <div class="mhd"><div class="mtit" id="mc-tit">Concluir Ordem de Serviço</div><button class="mcl" data-close="m-con">×</button></div>
