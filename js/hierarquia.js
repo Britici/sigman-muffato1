@@ -61,7 +61,11 @@ export function elegiveisAprovacao(o, lado) {
         (u.nivel >= 1 && u.nivel <= 2 && (u.lado === lado || u.lado === 'ambos') && escopoContemSala(u, salaId)))
       .map(u => u.login)
   )];
-  if (lado === 'manutencao') logins = logins.filter(login => login !== o.manutLogin);
+  // Regra de segregação de função (não aprovar o próprio serviço) vale
+  // só pra manutentor comum — admin fica de fora da exclusão, senão
+  // trava a própria conta quando ela executa E tenta aprovar (comum em
+  // testes, e admin já tem autoridade de override por definição).
+  if (lado === 'manutencao') logins = logins.filter(login => login !== o.manutLogin || db.usuarios.find(u => u.login === login)?.perfil === 'admin');
   return logins;
 }
 
