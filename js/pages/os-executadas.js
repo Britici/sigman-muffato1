@@ -35,6 +35,7 @@ export function init() {
     document.getElementById('md-continuar-btn')?.addEventListener('click', () => { if (_curOS) _continuarOS(_curOS.numero); });
     document.getElementById('md-rac-btn')?.addEventListener('click', () => { if(_curOS) abrirRAC(_curOS); });
     document.getElementById('btn-concluir')?.addEventListener('click', _concluir);
+    document.getElementById('btn-edit-os-save')?.addEventListener('click', _salvarEdicaoOS);
     document.getElementById('btn-export-csv')?.addEventListener('click', exportCSV);
     setupPhotoPreview('mc-photo-input', 'mc-photo-preview', (dataUrls) => {
       _fotosDataUrl = dataUrls;
@@ -118,6 +119,7 @@ export function render() {
   const ctAp = document.getElementById('ct-ap'); if (ctAp) ctAp.textContent = `Concluídas Aprovadas (${ap.length})`;
   window._verDet  = verDet;
   window._delOS   = delOS;
+  window._editarOS = _editarOS;
   window._atender = numero => abrirConcluir(numero, 'os');
   window._continuarOS = _continuarOS;
   window._ampliarFoto = _ampliarFoto;
@@ -168,7 +170,9 @@ function _rowHtml(o) {
   <td>${_thumbLista(o)}</td>
   <td><div style="display:flex;gap:4px">
     ${acoes}
-    <button class="btn btn-d" onclick="window._delOS('${o.numero}')">✕</button>
+    ${(status==='aberta' && _podeEditarExcluirOS(o)) ? `
+    <button class="btn btn-sm btn-gh" onclick="window._editarOS('${o.numero}')" title="Editar tipo/prioridade/problema">✎</button>
+    <button class="btn btn-d" onclick="window._delOS('${o.numero}')">✕</button>` : ''}
   </div></td>
 </tr>`;
 }
@@ -385,6 +389,22 @@ function _blocoAprovacao(o) {
     </div>`;
 }
 
+// Editar/Excluir uma OS "Aberta": admin e nível 1/2 sempre podem; quem
+// abriu (solicitanteLogin) só pode nos primeiros 10 minutos depois de
+// criada — depois disso, só nível 1/2 ou admin. Regra pedida em
+// 2026-08-04. Só se aplica a status==='aberta' (depois de atendida,
+// os campos de identificação viram histórico, não fazem mais sentido
+// editáveis por essa via).
+const _JANELA_EDICAO_MS = 10 * 60 * 1000;
+function _podeEditarExcluirOS(o) {
+  if (CU?.perfil === 'admin') return true;
+  if (CU?.nivel === 1 || CU?.nivel === 2) return true;
+  if (o.solicitanteLogin && o.solicitanteLogin === CU?.login && o.criadoEm) {
+    return (Date.now() - new Date(o.criadoEm).getTime()) <= _JANELA_EDICAO_MS;
+  }
+  return false;
+}
+
 function _tentarConcluir(o) {
   const prodOK  = !o.aprovadorProdLogin || !!o.aprovadoProdEm;
   const manutOK = !!o.aprovadoManutEm;
@@ -423,10 +443,47 @@ function _aprovarManut(numero) {
   verDet(numero); render(); updOSHoje();
 }
 
+// ── Editar OS (tipo/prioridade/problema) — sala/máquina ficam fora,
+// mesmo padrão do resto do projeto (trocar ativo = excluir e recriar).
+let _editarOsNum = null;
+function _editarOS(numero) {
+  const db = getDB(), o = db.ordens.find(x => x.numero === numero);
+  if (!o) { showToast('OS não encontrada.', 'er'); return; }
+  if (!_podeEditarExcluirOS(o)) {
+    showToast('Sem permissão — só quem abriu (até 10 min) ou nível 1/2 pode editar.', 'er');
+    return;
+  }
+  _editarOsNum = numero;
+  document.getElementById('me-numero').textContent = numero;
+  sv('me-tipo', o.tipo || ''); sv('me-prio', String(o.prioridade || '')); sv('me-prob', o.prob || '');
+  openM('m-edit-os');
+}
+
+function _salvarEdicaoOS() {
+  const db = getDB(), o = db.ordens.find(x => x.numero === _editarOsNum);
+  if (!o) { showAlert('al-edit-os', 'OS não encontrada — pode ter sido removida por outra sessão.', 'er'); return; }
+  if (!_podeEditarExcluirOS(o)) {
+    showAlert('al-edit-os', 'Sem permissão — a janela de 10 minutos pode ter expirado enquanto o modal estava aberto.', 'er');
+    return;
+  }
+  const tipo = v('me-tipo'), prioridade = v('me-prio'), prob = v('me-prob').trim();
+  if (!tipo || !prioridade || !prob) { showAlert('al-edit-os', 'Preencha tipo, prioridade e o problema.', 'er'); return; }
+  Object.assign(o, { tipo, prioridade, prob });
+  saveDB();
+  _logEdit('Editou OS', o.numero, `${o.sala} · ${o.maq}`);
+  closeM('m-edit-os');
+  showToast(`${o.numero} atualizada.`, 'ok');
+  render();
+}
+
 export function delOS(numero) {
-  if (!confirm(`Excluir ${numero}?`)) return;
   const db=getDB(), os=db.ordens.find(o=>o.numero===numero);
   if (!os) return;
+  if (!_podeEditarExcluirOS(os)) {
+    showToast('Sem permissão — só quem abriu (até 10 min) ou nível 1/2 pode excluir.', 'er');
+    return;
+  }
+  if (!confirm(`Excluir ${numero}?`)) return;
   db.ordens=db.ordens.filter(o=>o.numero!==numero);
   _logEdit('Excluiu OS', numero, `${os.sala} · ${os.maq}`);
   saveDB(); render(); updOSHoje();

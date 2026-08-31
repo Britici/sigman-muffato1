@@ -3,9 +3,10 @@
 // ============================================================
 // PCM · Qualidade — RAC (Relatório de Análise de Causa Raiz).
 // Portado da V1 (sigman-muffato/js/racr.js), adaptado ao schema e
-// convenções da V2 — layout das 7 seções idêntico à V1, sem o bloco
-// de fotos/upload (V2 não tem backend de Drive; se precisar, revisar
-// junto com a decisão de storage do projeto).
+// convenções da V2 — layout das 7 seções + fotos igual à V1 (evidências
+// via setupPhotoPreview, mesmo padrão de os-abertura.js/os-executadas.js).
+// RAC "Aberto" pode ser reaberto e editado (Ver → Salvar atualiza em
+// vez de criar); RAC "Fechado" é somente-leitura.
 //
 // IMPORTANTE: o modal #mb-rac e os campos rac-* JÁ EXISTIAM em
 // index.html, e o gatilho "Gerar RAC" a partir de uma O.S. corretiva
@@ -15,10 +16,10 @@
 // renomear (evita quebrar a integração existente).
 // ============================================================
 
-import { getDB, saveDB, _genRAC } from '../api.js?v=20260804a';
-import { CU } from '../auth.js?v=20260804a';
-import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260804a';
-import { salasNoEscopo } from '../hierarquia.js?v=20260804a';
+import { getDB, saveDB, _genRAC } from '../api.js?v=20260804b';
+import { CU } from '../auth.js?v=20260804b';
+import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260804b';
+import { salasNoEscopo } from '../hierarquia.js?v=20260804b';
 
 // DOM desta página é estático (router só alterna .on) — bind único.
 let _bound = false;
@@ -27,6 +28,8 @@ let _bound = false;
 // ao abrir um RAC novo — o array interno de setupPhotoPreview não tem
 // um método de reset externo).
 let _fotosDataUrl = [];
+// numero do RAC em edição, ou null = formulário é de um RAC novo.
+let _editando = null;
 
 export function init() {
   if (!_bound) {
@@ -45,6 +48,7 @@ export function init() {
 // RAC "em branco" quanto a fotos/anexos.
 export function resetFotos() {
   _fotosDataUrl = [];
+  _editando = null;
   const prev = document.getElementById('rac-photo-preview');
   if (prev) prev.innerHTML = '<span style="color:var(--txt3);font-size:13px">📷 Clique para anexar foto(s)</span>';
   const inputFoto = document.getElementById('rac-photo-input');
@@ -90,7 +94,7 @@ function _populateEquip() {
     maqs.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
 }
 
-// ── Salvar RAC (novo) ───────────────────────────────────────────────
+// ── Salvar RAC (novo OU edição de um "Aberto" existente) ────────────
 function _salvar() {
   const db = getDB();
   const falha = v('rac-falha').trim();
@@ -98,23 +102,42 @@ function _salvar() {
   const equipamento = v('rac-equip').trim(), sala = v('rac-sala').trim();
   if (!equipamento || !sala) { showAlert('al-rac', 'Selecione sala e equipamento.', 'er'); return; }
 
-  const maq = (db.maquinas || []).find(m => m.nome === equipamento);
-  const criticidade = maq?.criticidade || '';
-  const numero = _genRAC();
-  const agora = new Date().toISOString();
-  const rac = {
-    numero, dataAbertura: v('rac-data') || today(), osRef: window._racOsRef || '',
-    equipamento, sala, criticidade, tempoParada: 0,
+  const campos = {
     falha,
     causaRaiz: v('rac-causa').trim(),
     why1: v('rac-p1').trim(), why2: v('rac-p2').trim(), why3: v('rac-p3').trim(),
     why4: v('rac-p4').trim(), why5: v('rac-p5').trim(),
     acaoImediata: v('rac-imediata').trim(), acaoPreventiva: v('rac-preventiva').trim(),
     respProd: v('rac-resp-prod').trim(), respManu: v('rac-resp-manu').trim(), executantes: v('rac-exec').trim(),
-    status: 'Aberto', dataFechamento: '', fechadoPor: '', criadoEm: agora,
+    dataAbertura: v('rac-data') || today(),
     fotos: _fotosDataUrl.slice(),
   };
+
   db.racs = db.racs || [];
+
+  // Edição de um RAC "Aberto" já existente — sala/equipamento ficam
+  // travados (mesmo padrão de os-planejadas.js: trocar o ativo exige
+  // excluir e recriar, não editar in-place).
+  if (_editando) {
+    const r = db.racs.find(x => x.numero === _editando);
+    if (!r) { showAlert('al-rac', 'RAC não encontrado — pode ter sido removido por outra sessão.', 'er'); return; }
+    Object.assign(r, campos);
+    saveDB();
+    closeM('mb-rac');
+    resetFotos();
+    showToast(`${r.numero} atualizado.`, 'ok');
+    _render();
+    return;
+  }
+
+  const maq = (db.maquinas || []).find(m => m.nome === equipamento);
+  const criticidade = maq?.criticidade || '';
+  const numero = _genRAC();
+  const rac = {
+    numero, osRef: window._racOsRef || '', equipamento, sala, criticidade, tempoParada: 0,
+    status: 'Aberto', dataFechamento: '', fechadoPor: '', criadoEm: new Date().toISOString(),
+    ...campos,
+  };
   db.racs.push(rac);
   saveDB();
   closeM('mb-rac');
@@ -138,14 +161,16 @@ function _encerrar(numero) {
   _render();
 }
 
-// Modal de visualização é somente-leitura: status "Fechado" é imutável,
-// e reabrir um "Aberto" pra edição não foi pedido como caso de uso.
-// Salvar cria um RAC NOVO se clicado (mesmo _salvar do form em branco),
-// então escondemos o botão aqui pra não induzir a um clique enganoso.
+// RAC "Aberto": Ver permite editar e salvar as alterações (sala/
+// equipamento continuam travados — trocar o ativo exige excluir e
+// recriar, mesmo padrão de os-planejadas.js). RAC "Fechado": status é
+// imutável, form fica travado e Salvar continua escondido.
 function _ver(numero) {
   const db = getDB();
   const r = (db.racs || []).find(x => x.numero === numero);
   if (!r) return;
+  const editavel = r.status !== 'Fechado';
+  _editando = editavel ? numero : null;
   window._racOsRef = r.osRef || null;
   const salaSel = document.getElementById('rac-sala');
   if (salaSel) { salaSel.innerHTML = `<option value="${r.sala}">${r.sala}</option>`; salaSel.setAttribute('disabled', ''); }
@@ -168,7 +193,7 @@ function _ver(numero) {
   const inputFoto = document.getElementById('rac-photo-input');
   if (inputFoto) inputFoto.value = '';
   const btnSave = document.getElementById('btn-rac-save');
-  if (btnSave) btnSave.style.display = 'none';
+  if (btnSave) btnSave.style.display = editavel ? '' : 'none';
   openM('mb-rac');
 }
 
