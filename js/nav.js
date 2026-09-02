@@ -3,9 +3,9 @@
 // buildNav(), updateNavDots(), toggleSB(), toggleTheme()
 // ============================================================
 
-import { CU, ROLES } from './auth.js?v=20260801c';
-import { getDB } from './api.js?v=20260801c';
-import { goTo } from './router.js?v=20260801c';
+import { CU, ROLES } from './auth.js';
+import { getDB } from './api.js';
+import { goTo } from './router.js';
 
 const NAV = [
   { id:'dashboard',       ic:'📊', lbl:'Dashboard'               },

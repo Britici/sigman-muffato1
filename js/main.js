@@ -3,9 +3,9 @@
 // Entry point: inicializa tema, auto-login e eventos globais
 // ============================================================
 
-import { doLogin, doLogout, tryAutoLogin } from './auth.js?v=20260801c';
-import { toggleSB, closeSB, toggleTheme, loadTheme } from './nav.js?v=20260801c';
-import { openM, closeM } from './utils.js?v=20260801c';
+import { doLogin, doLogout, tryAutoLogin } from './auth.js';
+import { toggleSB, closeSB, toggleTheme, loadTheme } from './nav.js';
+import { openM, closeM } from './utils.js';
 
 // ── Tema ──────────────────────────────────────────────────────
 loadTheme();

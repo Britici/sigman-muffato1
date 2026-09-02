@@ -11,9 +11,9 @@
 // que exista ao menos 1 máquina embaixo dele na hierarquia.
 // ============================================================
 
-import { getDB, saveDB } from '../api.js?v=20260801c';
-import { podeGerenciarAtivos } from '../auth.js?v=20260801c';
-import { showToast, openM, closeM, fd } from '../utils.js?v=20260801c';
+import { getDB, saveDB } from '../api.js';
+import { podeGerenciarAtivos } from '../auth.js';
+import { showToast, openM, closeM, fd } from '../utils.js';
 
 // ── Estado do módulo ────────────────────────────────────────
 let _view = 'estrutura'; // 'estrutura' | 'familias' — abas da página Ativos

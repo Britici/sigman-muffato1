@@ -4,7 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
-  <script>window.SIGMAN_VER = '20260804b';</script>
+  <!--
+    CACHE-BUSTING — regra do projeto (revisada em 2026-08-05):
+    SIGMAN_VER é a ÚNICA versão que existe — bump só aqui.
+    - css/main.css e js/main.js (abaixo) derivam de window.SIGMAN_VER
+      dinamicamente, nunca hardcoded.
+    - js/router.js usa `?v=${_V}` (variável) nos imports DINÂMICOS de
+      página — também deriva de SIGMAN_VER sozinho, sem edição manual.
+    - Todo import ESTÁTICO entre módulos (import{...}from'...') NÃO
+      leva ?v= — import estático exige string literal (não aceita
+      variável), e por isso versionar cada um exigia bump manual em
+      toda entrega. Isso já causou módulos duplicados (mesma lib
+      carregada 2x sob URLs diferentes = 2 instâncias, cada uma com
+      seu próprio CU/_db em memória — bug real, achado em 2026-08-05).
+      Ficam sem ?v= de propósito: contam só com o cache normal do
+      navegador + hard refresh (Ctrl+Shift+R) ao testar.
+    NUNCA adicionar ?v= hardcoded de volta num import estático.
+  -->
+  <script>window.SIGMAN_VER = '20260805b';</script>
   <title>SIGMAN · Muffato Foods</title>
   <link rel="icon" href="https://muffatosupermercados.vteximg.com.br/arquivos/muffatosupermercados-favicon-2.ico">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -606,6 +623,16 @@
 </div>
 
 <!-- ══ MODAL: RAC ══ -->
+<div class="mb" id="m-rac-pick">
+  <div class="modal">
+    <div class="mhd"><div class="mtit">O.S. que Precisam de RAC</div><button class="mcl" data-close="m-rac-pick">×</button></div>
+    <div id="rac-pick-lista"></div>
+    <div class="mft">
+      <button class="btn btn-gh" id="btn-rac-avulso">RAC sem O.S. vinculada</button>
+    </div>
+  </div>
+</div>
+
 <div class="mb" id="mb-rac">
   <div class="modal" style="max-width:860px">
     <div class="mhd">

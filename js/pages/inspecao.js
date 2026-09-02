@@ -15,9 +15,9 @@
 // automáticos quando o nome da máquina contém "TERMOFORMADORA".
 // ============================================================
 
-import { getDB, saveDB, _genINSP } from '../api.js?v=20260801c';
-import { v, fd, openM, showAlert, showToast } from '../utils.js?v=20260801c';
-import { CU } from '../auth.js?v=20260801c';
+import { getDB, saveDB, _genINSP } from '../api.js';
+import { v, fd, openM, showAlert, showToast } from '../utils.js';
+import { CU } from '../auth.js';
 
 let _bound = false;
 let _tmplCache = null; // [{sala, equips:[{id,nome,subs:[{id,nome}]}]}]

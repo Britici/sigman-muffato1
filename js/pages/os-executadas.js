@@ -2,11 +2,11 @@
 // SIGMAN v2.0 — pages/os-executadas.js
 // ============================================================
 
-import { getDB, saveDB, apiPost } from '../api.js?v=20260803b';
-import { CU, updOSHoje } from '../auth.js?v=20260803b';
-import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js?v=20260803b';
-import { elegiveisProd, elegiveisManut } from '../hierarquia.js?v=20260803b';
-import { init as _initRAC, resetFotos as _resetRACFotos } from './analise-causa-raiz.js?v=20260803b';
+import { getDB, saveDB, apiPost } from '../api.js';
+import { CU, updOSHoje } from '../auth.js';
+import { v, sv, fd, today, prio, tipoBadge, stBadge, openM, closeM, showToast, debounce, setupPhotoPreview } from '../utils.js';
+import { elegiveisProd, elegiveisManut } from '../hierarquia.js';
+import { init as _initRAC, carregarDeOS as _carregarRACDeOS } from './analise-causa-raiz.js';
 
 let _sort = { col:'numero', dir:'desc' };
 let _curOS = null;
@@ -667,20 +667,7 @@ export function abrirRAC(os) {
   // e o botão Salvar fica sem nenhum listener (bug real, achado em
   // 2026-08-03). _initRAC() é idempotente (guard _bound interno).
   _initRAC();
-  _resetRACFotos();
-  const salaSel=document.getElementById('rac-sala');
-  if(salaSel){salaSel.innerHTML=`<option value="${os.sala}">${os.sala}</option>`;salaSel.setAttribute('disabled','');}
-  const equipSel=document.getElementById('rac-equip');
-  if(equipSel){equipSel.innerHTML=`<option value="${os.maq}">${os.maq}</option>`;equipSel.setAttribute('disabled','');}
-  sv('rac-data',os.data||today()); sv('rac-hora',os.ini||new Date().toTimeString().slice(0,5));
-  sv('rac-falha',os.prob||''); sv('rac-imediata',os.acao||''); sv('rac-resp-manu',os.manut||'');
-  ['rac-causa','rac-p1','rac-p2','rac-p3','rac-p4','rac-p5','rac-preventiva','rac-resp-prod','rac-exec'].forEach(id=>sv(id,''));
-  window._racOsRef=os.numero;
-  // btn-rac-save fica oculto depois de "Ver" um RAC fechado (analise-causa-raiz.js)
-  // — reexibir aqui, senão o Salvar sumiria pra sempre depois da 1ª visualização.
-  const btnSave=document.getElementById('btn-rac-save');
-  if(btnSave) btnSave.style.display='';
-  openM('mb-rac');
+  _carregarRACDeOS(os);
 }
 
 function _imprimirOS() {
@@ -747,7 +734,7 @@ export function exportCSV() {
   showToast('CSV exportado.','ok');
 }
 
-function _precisaRAC(o) {
+export function _precisaRAC(o) {
   if(o.tipo!=='Corretiva') return false;
   const parada=o.paradaMin||o.durMin||0; if(parada<=0) return false;
   const db=getDB(), maq=db.maquinas.find(m=>m.nome===o.maq);

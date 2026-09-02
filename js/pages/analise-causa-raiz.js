@@ -16,10 +16,10 @@
 // renomear (evita quebrar a integração existente).
 // ============================================================
 
-import { getDB, saveDB, _genRAC } from '../api.js?v=20260804b';
-import { CU } from '../auth.js?v=20260804b';
-import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js?v=20260804b';
-import { salasNoEscopo } from '../hierarquia.js?v=20260804b';
+import { getDB, saveDB, _genRAC } from '../api.js';
+import { CU } from '../auth.js';
+import { v, sv, fd, today, openM, closeM, showAlert, showToast, setupPhotoPreview } from '../utils.js';
+import { salasNoEscopo } from '../hierarquia.js';
 
 // DOM desta página é estático (router só alterna .on) — bind único.
 let _bound = false;
@@ -34,7 +34,8 @@ let _editando = null;
 export function init() {
   if (!_bound) {
     _bound = true;
-    document.getElementById('btn-novo-rac')?.addEventListener('click', _abrirNovo);
+    document.getElementById('btn-novo-rac')?.addEventListener('click', _abrirPicker);
+    document.getElementById('btn-rac-avulso')?.addEventListener('click', _abrirBranco);
     document.getElementById('rac-sala')?.addEventListener('change', _populateEquip);
     document.getElementById('btn-rac-save')?.addEventListener('click', _salvar);
     document.getElementById('btn-rac-print')?.addEventListener('click', _imprimir);
@@ -55,8 +56,66 @@ export function resetFotos() {
   if (inputFoto) inputFoto.value = '';
 }
 
-// ── Abrir modal em branco (botão "+ Novo RAC" da página) ──────────
-function _abrirNovo() {
+// ── "+ Novo RAC": mostra as O.S. corretivas que precisam de RAC antes
+// de abrir o formulário — evita começar do zero quando já existe uma
+// O.S. pendente esperando a análise. "RAC sem O.S. vinculada" continua
+// disponível pra casos avulsos (falha percebida sem O.S. corretiva
+// registrada, ex.: auditoria, inspeção).
+async function _abrirPicker() {
+  const db = getDB();
+  // Import dinâmico evita import circular (os-executadas.js já importa
+  // este módulo) — só busca _precisaRAC, que é puro/sem estado.
+  const { _precisaRAC } = await import('./os-executadas.js');
+  const pendentes = (db.ordens || []).filter(_precisaRAC)
+    .sort((a, b) => (b.paradaMin || b.durMin || 0) - (a.paradaMin || a.durMin || 0));
+  const lista = document.getElementById('rac-pick-lista');
+  if (lista) {
+    lista.innerHTML = pendentes.length
+      ? `<div class="tw"><table><thead><tr><th>OS</th><th>Sala</th><th>Máquina</th><th>Problema</th><th>Parada</th><th></th></tr></thead><tbody>${
+        pendentes.map(o => `<tr>
+          <td class="osn">${o.numero}</td><td>${o.sala}</td><td>${o.maq}</td>
+          <td style="max-width:200px;white-space:normal">${o.prob || '—'}</td>
+          <td>${o.paradaMin || o.durMin || 0}min</td>
+          <td><button class="btn btn-sm btn-p" onclick="window._racSelecionarOS('${o.numero}')">Gerar RAC</button></td>
+        </tr>`).join('')
+      }</tbody></table></div>`
+      : `<div class="empty"><div class="ei-ok">✅</div><p>Nenhuma O.S. pendente de RAC no momento.</p></div>`;
+  }
+  window._racSelecionarOS = _selecionarOS;
+  openM('m-rac-pick');
+}
+
+function _selecionarOS(numero) {
+  const db = getDB();
+  const os = (db.ordens || []).find(o => o.numero === numero);
+  if (!os) { showToast('OS não encontrada.', 'er'); return; }
+  closeM('m-rac-pick');
+  carregarDeOS(os);
+}
+
+// Preenche o form do RAC a partir de uma O.S. (sala/equip travados,
+// falha/ação/manutentor pré-preenchidos). Único ponto que faz isso —
+// reaproveitado pelo picker acima e por abrirRAC() em os-executadas.js
+// (botão "Gerar RAC" no detalhe de uma OS), evitando duplicar a lógica
+// nos dois lugares.
+export function carregarDeOS(os) {
+  resetFotos();
+  const salaSel = document.getElementById('rac-sala');
+  if (salaSel) { salaSel.innerHTML = `<option value="${os.sala}">${os.sala}</option>`; salaSel.setAttribute('disabled', ''); }
+  const equipSel = document.getElementById('rac-equip');
+  if (equipSel) { equipSel.innerHTML = `<option value="${os.maq}">${os.maq}</option>`; equipSel.setAttribute('disabled', ''); }
+  sv('rac-data', os.data || today()); sv('rac-hora', os.ini || new Date().toTimeString().slice(0, 5));
+  sv('rac-falha', os.prob || ''); sv('rac-imediata', os.acao || ''); sv('rac-resp-manu', os.manut || '');
+  ['rac-causa', 'rac-p1', 'rac-p2', 'rac-p3', 'rac-p4', 'rac-p5', 'rac-preventiva', 'rac-resp-prod', 'rac-exec'].forEach(id => sv(id, ''));
+  window._racOsRef = os.numero;
+  const btnSave = document.getElementById('btn-rac-save');
+  if (btnSave) btnSave.style.display = '';
+  openM('mb-rac');
+}
+
+// "RAC sem O.S. vinculada" — formulário totalmente em branco.
+function _abrirBranco() {
+  closeM('m-rac-pick');
   window._racOsRef = null;
   const db = getDB();
   const salaSel = document.getElementById('rac-sala');

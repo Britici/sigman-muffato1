@@ -5,7 +5,8 @@
 // para ES6 + mock/localStorage (mesmo padrão do resto do V2).
 // ============================================================
 
-import { getDB, saveDB, _genOC } from '../api.js?v=20260801c';
+import { getDB, saveDB, _genOC } from '../api.js';
+import { CU } from '../auth.js';
 
 const PRIORIDADES = [
   { val: '1', label: '1 – Emergencial', desc: 'Processo parado – compra imediata' },
@@ -229,7 +230,7 @@ function _submit(e) {
     // Etapa 1 (Solicitação) já vem preenchida automaticamente
     const oc = {
       id,
-      solicitante: db.usuarioAtual?.nome || '',
+      solicitante: CU?.nome || '',
       salaId,
       maqId,
       tipoAcao: tipo,
