@@ -5,21 +5,27 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- 🔧 LINHA 1/3 — ALTERE SÓ AQUI A CADA DEPLOY -->
   <!--
-    CACHE-BUSTING — regra do projeto (revisada em 2026-08-05):
+    CACHE-BUSTING — regra do projeto (revisada em 2026-08-05, 2ª vez):
     SIGMAN_VER é a ÚNICA versão que existe — bump só aqui.
     - css/main.css e js/main.js (abaixo) derivam de window.SIGMAN_VER
-      dinamicamente, nunca hardcoded.
-    - js/router.js usa `?v=${_V}` (variável) nos imports DINÂMICOS de
-      página — também deriva de SIGMAN_VER sozinho, sem edição manual.
-    - Todo import ESTÁTICO entre módulos (import{...}from'...') NÃO
-      leva ?v= — import estático exige string literal (não aceita
-      variável), e por isso versionar cada um exigia bump manual em
-      toda entrega. Isso já causou módulos duplicados (mesma lib
-      carregada 2x sob URLs diferentes = 2 instâncias, cada uma com
-      seu próprio CU/_db em memória — bug real, achado em 2026-08-05).
-      Ficam sem ?v= de propósito: contam só com o cache normal do
-      navegador + hard refresh (Ctrl+Shift+R) ao testar.
-    NUNCA adicionar ?v= hardcoded de volta num import estático.
+      dinamicamente, nunca hardcoded. Únicos dois lugares com ?v=.
+    - js/router.js NÃO leva ?v= nos imports dinâmicos de página, e
+      NENHUM import entre módulos .js (estático OU dinâmico) leva ?v=
+      em lugar nenhum do projeto. Import estático exige string literal
+      (não aceita variável) — então, se os imports dinâmicos do router
+      levassem ?v=${_V} e os imports estáticos entre páginas (que
+      existem — ex.: os-planejadas.js importa de os-executadas.js)
+      não levassem, o MESMO arquivo seria buscado sob DUAS URLs
+      diferentes = 2 instâncias separadas do módulo, cada uma com seu
+      próprio estado (_db, CU, _concluirId, etc). Isso já causou bugs
+      reais 2x em 2026-08-05 (permissão de edição sempre negada;
+      conclusão de O.S. Planejada com "item não encontrado" mesmo
+      existindo). A regra agora é simples: ?v= NUNCA aparece em nenhum
+      import de módulo — só nos dois `<script>`/`<link>` de entrada
+      abaixo. Cache-busting de página fica por conta do cache normal
+      do navegador + hard refresh (Ctrl+Shift+R) ao testar.
+    NUNCA adicionar ?v= de volta em qualquer import (estático OU
+    dinâmico) entre arquivos .js.
   -->
   <script>window.SIGMAN_VER = '20260805b';</script>
   <title>SIGMAN · Muffato Foods</title>

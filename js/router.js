@@ -33,21 +33,35 @@ const ROUTES = {
 // Só aqui usamos a variável (não um literal fixo): como o loader é
 // dinâmico, basta bumpar window.SIGMAN_VER no index.html — não
 // precisa editar este arquivo de novo a cada sessão.
-const _V = window.SIGMAN_VER || '';
+//
+// ⚠️ Os loaders abaixo NÃO levam ?v= — mesmo sendo imports dinâmicos
+// (que aceitariam a variável _V). Motivo: vários desses arquivos
+// TAMBÉM são importados estaticamente por OUTRO módulo de página
+// (ex.: os-planejadas.js importa abrirConcluir de os-executadas.js;
+// os-executadas.js importa de analise-causa-raiz.js). Import estático
+// exige string literal, então essas referências cruzadas nunca têm
+// ?v=. Se o loader abaixo tivesse ?v=${_V}, o mesmo arquivo seria
+// buscado sob DUAS URLs diferentes → o navegador cria DUAS instâncias
+// separadas do módulo, cada uma com seu próprio estado (_concluirId,
+// _bound, etc.) — bug real e sério, achado em 2026-08-05 (conclusão de
+// O.S. Planejada falhando com "item não encontrado" mesmo com o dado
+// existindo, porque o clique de Salvar rodava numa instância que nunca
+// recebeu o id certo). Cache-busting de página fica só por conta do
+// hard refresh (Ctrl+Shift+R) — não reintroduzir ?v= aqui.
 const PAGE_LOADERS = {
-  'dashboard':          () => import(`./pages/dashboard.js?v=${_V}`),
-  'os-executadas':      () => import(`./pages/os-executadas.js?v=${_V}`),
-  'os-abertura':        () => import(`./pages/os-abertura.js?v=${_V}`),
-  'os-planejadas':      () => import(`./pages/os-planejadas.js?v=${_V}`),
-  'os-planejamento':    () => import(`./pages/os-planejamento.js?v=${_V}`),
-  'inspecao':           () => import(`./pages/inspecao.js?v=${_V}`),
-  'preventiva':         () => import(`./pages/preventiva.js?v=${_V}`),
-  'oc-solicitacao':     () => import(`./pages/oc-solicitacao.js?v=${_V}`),
-  'oc-acompanhamento':  () => import(`./pages/oc-acompanhamento.js?v=${_V}`),
-  'analise-causa-raiz': () => import(`./pages/analise-causa-raiz.js?v=${_V}`),
-  'ativos':             () => import(`./pages/ativos.js?v=${_V}`),
-  'usuarios':           () => import(`./pages/usuarios.js?v=${_V}`),
-  'configuracoes':      () => import(`./pages/configuracoes.js?v=${_V}`),
+  'dashboard':          () => import(`./pages/dashboard.js`),
+  'os-executadas':      () => import(`./pages/os-executadas.js`),
+  'os-abertura':        () => import(`./pages/os-abertura.js`),
+  'os-planejadas':      () => import(`./pages/os-planejadas.js`),
+  'os-planejamento':    () => import(`./pages/os-planejamento.js`),
+  'inspecao':           () => import(`./pages/inspecao.js`),
+  'preventiva':         () => import(`./pages/preventiva.js`),
+  'oc-solicitacao':     () => import(`./pages/oc-solicitacao.js`),
+  'oc-acompanhamento':  () => import(`./pages/oc-acompanhamento.js`),
+  'analise-causa-raiz': () => import(`./pages/analise-causa-raiz.js`),
+  'ativos':             () => import(`./pages/ativos.js`),
+  'usuarios':           () => import(`./pages/usuarios.js`),
+  'configuracoes':      () => import(`./pages/configuracoes.js`),
 };
 
 let _currentRoute = null;
